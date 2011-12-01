@@ -839,13 +839,12 @@ const char * S9xStringInput (const char *message)
 	return (NULL);
 }
 
-#ifndef HAVE_SDL
-
 void S9xSetTitle (const char *string)
 {
-	XStoreName(GUI.display, GUI.window, string);
-	XFlush(GUI.display);
+  SDL_WM_SetCaption(string, string);
 }
+
+#ifndef HAVE_SDL
 
 static void SetXRepeat (bool8 state)
 {
@@ -886,8 +885,6 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 {
 	int	i, d;
 
-#ifndef HAVE_SDL // FIXME: should be modified in SDL way?
-
 	if (!isdigit(n[1]) || !isdigit(n[2]) || n[3] != ':')
 		goto unrecog;
 
@@ -923,10 +920,12 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 				i++;
 			}
 
+#ifndef HAVE_SDL
 			if ((ks = XStringToKeysym(n + i)) == NoSymbol)
 				goto unrecog;
 			if ((kc = XKeysymToKeycode(GUI.display, ks)) == 0)
 				goto unrecog;
+#endif
 
 			d |= kc & 0xff;
 
@@ -969,7 +968,6 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 		default:
 			break;
 	}
-#endif
 
 unrecog:
 	char	*err = new char[strlen(n) + 34];

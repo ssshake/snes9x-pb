@@ -1777,9 +1777,8 @@ int main (int argc, char **argv)
 
 	sprintf(String, "\"%s\" %s: %s", Memory.ROMName, TITLE, VERSION);
 
-#ifndef HAVE_SDL // FIXME: you can still have the title in SDL
+	// domaemon: setting the title on the window bar
 	S9xSetTitle(String);
-#endif
 
 #ifdef JOYSTICK_SUPPORT
 	uint32	JoypadSkip = 0;
