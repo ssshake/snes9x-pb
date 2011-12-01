@@ -229,6 +229,8 @@
 #endif
 #endif
 
+#define HAVE_SDL
+
 typedef std::pair<std::string, std::string>	strpair_t;
 
 ConfigFile::secvec_t	keymaps;
@@ -1709,7 +1711,9 @@ int main (int argc, char **argv)
 	S9xInitInputDevices();
 	S9xInitDisplay(argc, argv);
 	S9xSetupDefaultKeymap();
+#ifndef HAVE_SDL
 	S9xTextMode();
+#endif
 
 #ifdef NETPLAY_SUPPORT
 	if (strlen(Settings.ServerName) == 0)
@@ -1767,10 +1771,15 @@ int main (int argc, char **argv)
 		CPU.Flags |= flags;
 	}
 
+#ifndef HAVE_SDL
 	S9xGraphicsMode();
+#endif
 
 	sprintf(String, "\"%s\" %s: %s", Memory.ROMName, TITLE, VERSION);
+
+#ifndef HAVE_SDL // FIXME: you can still have the title in SDL
 	S9xSetTitle(String);
+#endif
 
 #ifdef JOYSTICK_SUPPORT
 	uint32	JoypadSkip = 0;
@@ -1790,7 +1799,9 @@ int main (int argc, char **argv)
 		{
 			if (NetPlay.PendingWait4Sync && !S9xNPWaitForHeartBeatDelay(100))
 			{
+#ifndef HAVE_SDL // FIXME: Event has to be handled
 				S9xProcessEvents(FALSE);
+#endif
 				continue;
 			}
 
@@ -1846,7 +1857,9 @@ int main (int argc, char **argv)
 	#endif
 		if (Settings.Paused)
 		{
+#ifndef HAVE_SDL // FIXME: Event has to be handled
 			S9xProcessEvents(FALSE);
+#endif
 			usleep(100000);
 		}
 
@@ -1855,7 +1868,9 @@ int main (int argc, char **argv)
 			ReadJoysticks();
 	#endif
 
+#ifndef HAVE_SDL // FIXME: Event has to be handled
 		S9xProcessEvents(FALSE);
+#endif
 
 	#ifdef DEBUGGER
 		if (!Settings.Paused && !(CPU.Flags & DEBUG_MODE_FLAG))

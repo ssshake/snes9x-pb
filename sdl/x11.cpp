@@ -209,13 +209,17 @@
 #include "blit.h"
 #include "display.h"
 
+#define HAVE_SDL 1
+
 struct GUIData
 {
+#ifndef HAVE_SDL
 	Display			*display;
 	Screen			*screen;
 	Visual			*visual;
 	GC				gc;
 	int				screen_num;
+#endif
 	int				depth;
 	int				pixel_format;
 	int				bytes_per_pixel;
@@ -225,8 +229,10 @@ struct GUIData
 	uint32			red_size;
 	uint32			green_size;
 	uint32			blue_size;
+#ifndef HAVE_SDL
 	Window			window;
 	XImage			*image;
+#endif
 	uint8			*snes_buffer;
 	uint8			*filter_buffer;
 	uint8			*blit_screen;
@@ -277,14 +283,20 @@ enum
 	VIDEOMODE_HQ2X
 };
 
+#ifndef HAVE_SDL
 static int ErrorHandler (Display *, XErrorEvent *);
 static bool8 CheckForPendingXEvents (Display *);
 static void SetXRepeat (bool8);
+#endif
+
 static void SetupImage (void);
 static void TakedownImage (void);
 static void Repaint (bool8);
+
+#ifndef HAVE_SDL
 static void Convert16To24 (int, int);
 static void Convert16To24Packed (int, int);
+#endif
 
 
 void S9xExtraDisplayUsage (void)
@@ -492,8 +504,13 @@ static int ErrorHandler (Display *display, XErrorEvent *event)
 	return (0);
 }
 
+
+#include <SDL/SDL.h>
+SDL_Surface *screen;
+
 void S9xInitDisplay (int argc, char **argv)
 {
+#ifndef HAVE_SDL
 	GUI.display = XOpenDisplay(NULL);
 	if (GUI.display == NULL)
 		FatalError("Failed to connect to X server.");
@@ -524,6 +541,15 @@ void S9xInitDisplay (int argc, char **argv)
 		GUI.green_shift++;
 
 	XFree(matches);
+#endif // HAVE_SDL
+
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+          printf("Unable to initialize SDL: %s\n", SDL_GetError());
+        }
+
+        atexit(SDL_Quit);
+
+#ifndef HAVE_SDL
 
 	switch (GUI.depth)
 	{
@@ -563,10 +589,16 @@ void S9xInitDisplay (int argc, char **argv)
 			break;
 	}
 
+#else // domaemon: we just go along with RGB565, nothing else..
+	S9xSetRenderPixelFormat(RGB565);
+#endif	
+
 	S9xBlitFilterInit();
 	S9xBlit2xSaIFilterInit();
 	S9xBlitHQ2xFilterInit();
 
+
+#ifndef HAVE_SDL // setting up the window
 	XSetWindowAttributes	attrib;
 
 	memset(&attrib, 0, sizeof(attrib));
@@ -606,8 +638,20 @@ void S9xInitDisplay (int argc, char **argv)
 
 	XMapRaised(GUI.display, GUI.window);
 	XClearWindow(GUI.display, GUI.window);
+#else
+	// FIXME: the screen size needs to be flexible.
+        screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
 
+	// FIXME: check if the screen is really in RGB565 mode. screen->fmt	
+        if (screen == NULL) {
+          printf("Unable to set video mode: %s\n", SDL_GetError());
+          exit(1);
+        }
+#endif
+	// domaemon: buffer allocation.
 	SetupImage();
+
+#ifndef HAVE_SDL
 
 	switch (GUI.depth)
 	{
@@ -628,14 +672,19 @@ void S9xInitDisplay (int argc, char **argv)
 			GUI.bytes_per_pixel = 2;
 			break;
 	}
+#endif
 }
 
 void S9xDeinitDisplay (void)
 {
+#ifndef HAVE_SDL
 	S9xTextMode();
+#endif
 	TakedownImage();
+#ifndef HAVE_SDL
 	XSync(GUI.display, False);
 	XCloseDisplay(GUI.display);
+#endif
 	S9xBlitFilterDeinit();
 	S9xBlit2xSaIFilterDeinit();
 	S9xBlitHQ2xFilterDeinit();
@@ -655,6 +704,7 @@ static void TakedownImage (void)
 		GUI.filter_buffer = NULL;
 	}
 
+#ifndef HAVE_SDL
 	if (GUI.image)
 	{
 	#ifdef MITSHM
@@ -676,6 +726,7 @@ static void TakedownImage (void)
 			GUI.image = NULL;
 		}
 	}
+#endif
 
 	S9xGraphicsDeinit();
 }
@@ -683,6 +734,8 @@ static void TakedownImage (void)
 static void SetupImage (void)
 {
 	TakedownImage();
+
+#ifndef HAVE_SDL
 
 #ifdef MITSHM
 	GUI.use_shared_memory = TRUE;
@@ -751,6 +804,8 @@ static void SetupImage (void)
 	GUI.image->byte_order = MSBFirst;
 #endif
 
+#endif // HAVE_SDL
+
 	GFX.Pitch = SNES_WIDTH * 2 * 2;
 	GUI.snes_buffer = (uint8 *) calloc(GFX.Pitch * ((SNES_HEIGHT_EXTENDED + 4) * 2), 1);
 	if (!GUI.snes_buffer)
@@ -761,6 +816,8 @@ static void SetupImage (void)
 	GUI.filter_buffer = (uint8 *) calloc((SNES_WIDTH * 2) * 2 * (SNES_HEIGHT_EXTENDED * 2), 1);
 	if (!GUI.filter_buffer)
 		FatalError("Failed to allocate GUI.filter_buffer.");
+
+#ifndef HAVE_SDL
 
 	if (GUI.depth == 15 || GUI.depth == 16)
 	{
@@ -774,6 +831,11 @@ static void SetupImage (void)
 		GUI.blit_screen       = GUI.filter_buffer;
 		GUI.need_convert      = TRUE;
 	}
+#else
+        GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
+        GUI.blit_screen       = (uint8 *) screen->pixels;
+        GUI.need_convert      = FALSE;
+#endif
 
 	S9xGraphicsInit();
 }
@@ -846,6 +908,7 @@ void S9xPutImage (int width, int height)
 		}
 	}
 
+#ifndef HAVE_SDL // conversion, not needed.
 	if (GUI.need_convert)
 	{
 		if (GUI.bytes_per_pixel == 3)
@@ -853,12 +916,16 @@ void S9xPutImage (int width, int height)
 		else
 			Convert16To24(copyWidth, copyHeight);
 	}
+#endif
 
 	Repaint(TRUE);
 
 	prevWidth  = width;
 	prevHeight = height;
 }
+
+
+#ifndef HAVE_SDL
 
 static void Convert16To24 (int width, int height)
 {
@@ -962,8 +1029,12 @@ static void Convert16To24Packed (int width, int height)
 	}
 }
 
+#endif
+
 static void Repaint (bool8 isFrameBoundry)
 {
+#ifndef HAVE_SDL
+
 #ifdef MITSHM
 	if (GUI.use_shared_memory)
 	{
@@ -1004,8 +1075,13 @@ static void Repaint (bool8 isFrameBoundry)
 
 	if (Settings.DumpStreams && isFrameBoundry)
 		S9xVideoLogger(GUI.image->data, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, GUI.bytes_per_pixel, GUI.image->bytes_per_line);
+
+#else // FIXME: VideoLogger totally ignored.
+        SDL_UpdateRect(screen, 0, 0, 0, 0);
+#endif
 }
 
+#ifndef HAVE_SDL
 void S9xTextMode (void)
 {
 	SetXRepeat(TRUE);
@@ -1015,7 +1091,9 @@ void S9xGraphicsMode (void)
 {
 	SetXRepeat(FALSE);
 }
+#endif
 
+#ifndef HAVE_SDL
 static bool8 CheckForPendingXEvents (Display *display)
 {
 #ifdef SELECT_BROKEN_FOR_SIGNALS
@@ -1074,18 +1152,23 @@ void S9xProcessEvents (bool8 block)
 		}
 	}
 }
+#endif
 
 const char * S9xSelectFilename (const char *def, const char *dir1, const char *ext1, const char *title)
 {
 	static char	s[PATH_MAX + 1];
 	char		buffer[PATH_MAX + 1];
 
+#ifndef HAVE_SDL
 	SetXRepeat(TRUE);
+#endif
 
 	printf("\n%s (default: %s): ", title, def);
 	fflush(stdout);
 
+#ifndef HAVE_SDL
 	SetXRepeat(FALSE);
+#endif
 
 	if (fgets(buffer, PATH_MAX + 1, stdin))
 	{
@@ -1138,6 +1221,8 @@ const char * S9xStringInput (const char *message)
 	return (NULL);
 }
 
+#ifndef HAVE_SDL
+
 void S9xSetTitle (const char *string)
 {
 	XStoreName(GUI.display, GUI.window, string);
@@ -1151,6 +1236,8 @@ static void SetXRepeat (bool8 state)
 	else
 		XAutoRepeatOff(GUI.display);
 }
+
+#endif
 
 s9xcommand_t S9xGetDisplayCommandT (const char *n)
 {
@@ -1180,6 +1267,8 @@ void S9xHandleDisplayCommand (s9xcommand_t cmd, int16 data1, int16 data2)
 bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 {
 	int	i, d;
+
+#ifndef HAVE_SDL // FIXME: should be modified in SDL say?
 
 	if (!isdigit(n[1]) || !isdigit(n[2]) || n[3] != ':')
 		goto unrecog;
@@ -1262,6 +1351,7 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 		default:
 			break;
 	}
+#endif
 
 unrecog:
 	char	*err = new char[strlen(n) + 34];
