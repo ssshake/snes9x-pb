@@ -226,7 +226,9 @@ struct GUIData
 	XImage			*image;
 #endif
 	uint8			*snes_buffer;
+#ifndef HAVE_SDL
 	uint8			*filter_buffer;
+#endif
 	uint8			*blit_screen;
 	uint32			blit_screen_pitch;
 	bool8			need_convert;
@@ -554,11 +556,13 @@ static void TakedownImage (void)
 		GUI.snes_buffer = NULL;
 	}
 
+#ifndef HAVE_SDL
 	if (GUI.filter_buffer)
 	{
 		free(GUI.filter_buffer);
 		GUI.filter_buffer = NULL;
 	}
+#endif
 
 	S9xGraphicsDeinit();
 }
@@ -567,6 +571,8 @@ static void SetupImage (void)
 {
 	TakedownImage();
 
+	// domaemon: .Screen, .filter_buffer & .blit_screen
+
 	GFX.Pitch = SNES_WIDTH * 2 * 2;
 	GUI.snes_buffer = (uint8 *) calloc(GFX.Pitch * ((SNES_HEIGHT_EXTENDED + 4) * 2), 1);
 	if (!GUI.snes_buffer)
@@ -574,9 +580,11 @@ static void SetupImage (void)
 
 	GFX.Screen = (uint16 *) (GUI.snes_buffer + (GFX.Pitch * 2 * 2));
 
+#ifndef HAVE_SDL
 	GUI.filter_buffer = (uint8 *) calloc((SNES_WIDTH * 2) * 2 * (SNES_HEIGHT_EXTENDED * 2), 1);
 	if (!GUI.filter_buffer)
 		FatalError("Failed to allocate GUI.filter_buffer.");
+#endif
 
         GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
         GUI.blit_screen       = (uint8 *) screen->pixels;
