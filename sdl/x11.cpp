@@ -193,12 +193,6 @@
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
 
-#ifdef MITSHM
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <X11/extensions/XShm.h>
-#endif
-
 #include "snes9x.h"
 #include "memmap.h"
 #include "ppu.h"
@@ -219,7 +213,6 @@ struct GUIData
 	Visual			*visual;
 	GC				gc;
 	int				screen_num;
-#endif
 	int				depth;
 	int				pixel_format;
 	int				bytes_per_pixel;
@@ -229,7 +222,6 @@ struct GUIData
 	uint32			red_size;
 	uint32			green_size;
 	uint32			blue_size;
-#ifndef HAVE_SDL
 	Window			window;
 	XImage			*image;
 #endif
@@ -245,10 +237,6 @@ struct GUIData
 	int				mouse_y;
 	bool8			mod1_pressed;
 	bool8			no_repeat;
-#ifdef MITSHM
-	XShmSegmentInfo	sm_info;
-	bool8			use_shared_memory;
-#endif
 };
 
 static struct GUIData	GUI;
@@ -498,9 +486,6 @@ static void FatalError (const char *str)
 
 static int ErrorHandler (Display *display, XErrorEvent *event)
 {
-#ifdef MITSHM
-	GUI.use_shared_memory = FALSE;
-#endif
 	return (0);
 }
 
@@ -510,181 +495,52 @@ SDL_Surface *screen;
 
 void S9xInitDisplay (int argc, char **argv)
 {
-#ifndef HAVE_SDL
-	GUI.display = XOpenDisplay(NULL);
-	if (GUI.display == NULL)
-		FatalError("Failed to connect to X server.");
+  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    printf("Unable to initialize SDL: %s\n", SDL_GetError());
+  }
+  
+  atexit(SDL_Quit);
 
-	GUI.screen     = DefaultScreenOfDisplay(GUI.display);
-	GUI.screen_num = XScreenNumberOfScreen(GUI.screen);
-	GUI.visual     = DefaultVisualOfScreen(GUI.screen);
+  /*
+   * domaemon
+   *
+   * we just go along with RGB565 for now, nothing else..
+   */
 
-	XVisualInfo	plate, *matches;
-	int			count;
-
-	plate.visualid = XVisualIDFromVisual(GUI.visual);
-	matches = XGetVisualInfo(GUI.display, VisualIDMask, &plate, &count);
-	if (!count)
-		FatalError("Your X Window System server is unwell!");
-
-	GUI.depth = matches[0].depth;
-	if ((GUI.depth != 15 && GUI.depth != 16 && GUI.depth != 24) || (matches[0].c_class != TrueColor))
-		FatalError("Requiers 15, 16, 24 or 32-bit color depth supporting TrueColor.");
-
-	GUI.red_shift   = ffs(matches[0].red_mask)   - 1;
-	GUI.green_shift = ffs(matches[0].green_mask) - 1;
-	GUI.blue_shift  = ffs(matches[0].blue_mask)  - 1;
-	GUI.red_size    = matches[0].red_mask   >> GUI.red_shift;
-	GUI.green_size  = matches[0].green_mask >> GUI.green_shift;
-	GUI.blue_size   = matches[0].blue_mask  >> GUI.blue_shift;
-	if (GUI.depth == 16 && GUI.green_size == 63)
-		GUI.green_shift++;
-
-	XFree(matches);
-#endif // HAVE_SDL
-
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-          printf("Unable to initialize SDL: %s\n", SDL_GetError());
-        }
-
-        atexit(SDL_Quit);
-
-#ifndef HAVE_SDL
-
-	switch (GUI.depth)
-	{
-		default:
-		case 32:
-		case 24:
-			S9xSetRenderPixelFormat(RGB555);
-			GUI.pixel_format = 555;
-			break;
-
-		case 16:
-			if (GUI.red_size != GUI.green_size || GUI.blue_size != GUI.green_size)
-			{
-				// 565 format
-				if (GUI.green_shift > GUI.blue_shift && GUI.green_shift > GUI.red_shift)
-					S9xSetRenderPixelFormat(GBR565);
-				else
-				if (GUI.red_shift > GUI.blue_shift)
-					S9xSetRenderPixelFormat(RGB565);
-				else
-					S9xSetRenderPixelFormat(BGR565);
-
-				GUI.pixel_format = 565;
-				break;
-			}
-			// FALL ...
-		case 15:
-			if (GUI.green_shift > GUI.blue_shift && GUI.green_shift > GUI.red_shift)
-				S9xSetRenderPixelFormat(GBR555);
-			else
-			if (GUI.red_shift > GUI.blue_shift)
-				S9xSetRenderPixelFormat(RGB555);
-			else
-				S9xSetRenderPixelFormat(BGR555);
-
-			GUI.pixel_format = 555;
-			break;
-	}
-
-#else // domaemon: we just go along with RGB565, nothing else..
-	S9xSetRenderPixelFormat(RGB565);
-#endif	
+  S9xSetRenderPixelFormat(RGB565);
 
 	S9xBlitFilterInit();
 	S9xBlit2xSaIFilterInit();
 	S9xBlitHQ2xFilterInit();
 
 
-#ifndef HAVE_SDL // setting up the window
-	XSetWindowAttributes	attrib;
-
-	memset(&attrib, 0, sizeof(attrib));
-	attrib.background_pixel = BlackPixelOfScreen(GUI.screen);
-	attrib.colormap = XCreateColormap(GUI.display, RootWindowOfScreen(GUI.screen), GUI.visual, AllocNone);
-
-	GUI.window = XCreateWindow(GUI.display, RootWindowOfScreen(GUI.screen),
-							   (WidthOfScreen(GUI.screen) - SNES_WIDTH * 2) / 2, (HeightOfScreen(GUI.screen) - SNES_HEIGHT_EXTENDED * 2) / 2,
-							   SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 0, GUI.depth, InputOutput, GUI.visual, CWBackPixel | CWColormap, &attrib);
-
-	static XColor	bg, fg;
-	static char		data[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	Pixmap			bitmap;
-
-	bitmap = XCreateBitmapFromData(GUI.display, GUI.window, data, 8, 8);
-	GUI.point_cursor = XCreatePixmapCursor(GUI.display, bitmap, bitmap, &fg, &bg, 0, 0);
-	XDefineCursor(GUI.display, GUI.window, GUI.point_cursor);
-	GUI.cross_hair_cursor = XCreateFontCursor(GUI.display, XC_crosshair);
-
-	GUI.gc = DefaultGCOfScreen(GUI.screen);
-
-	XSizeHints	Hints;
-	XWMHints	WMHints;
-
-	memset((void *) &Hints, 0, sizeof(XSizeHints));
-	memset((void *) &WMHints, 0, sizeof(XWMHints));
-
-	Hints.flags      = PSize | PMinSize | PMaxSize;
-	Hints.min_width  = Hints.max_width  = Hints.base_width  = SNES_WIDTH * 2;
-	Hints.min_height = Hints.max_height = Hints.base_height = SNES_HEIGHT_EXTENDED * 2;
-	WMHints.input    = True;
-	WMHints.flags    = InputHint;
-
-	XSetWMHints(GUI.display, GUI.window, &WMHints);
-	XSetWMNormalHints(GUI.display, GUI.window, &Hints);
-	XSelectInput(GUI.display, GUI.window, FocusChangeMask | ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask);
-
-	XMapRaised(GUI.display, GUI.window);
-	XClearWindow(GUI.display, GUI.window);
-#else
-	// FIXME: the screen size needs to be flexible.
+	/*
+	 * domaemon
+	 *
+	 * FIXME: The secreen size should be flexible
+	 * FIXME: Check if the SDL screen is really in RGB565 mode. screen->fmt	
+	 */	
         screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
 
-	// FIXME: check if the screen is really in RGB565 mode. screen->fmt	
         if (screen == NULL) {
           printf("Unable to set video mode: %s\n", SDL_GetError());
           exit(1);
         }
-#endif
-	// domaemon: buffer allocation.
+
+	/*
+	 * domaemon
+	 *
+	 * buffer allocation, quite important
+	 */
 	SetupImage();
-
-#ifndef HAVE_SDL
-
-	switch (GUI.depth)
-	{
-		default:
-		case 32:
-			GUI.bytes_per_pixel = 4;
-			break;
-
-		case 24:
-			if (GUI.image->bits_per_pixel == 24)
-				GUI.bytes_per_pixel = 3;
-			else
-				GUI.bytes_per_pixel = 4;
-			break;
-
-		case 15:
-		case 16:
-			GUI.bytes_per_pixel = 2;
-			break;
-	}
-#endif
 }
 
 void S9xDeinitDisplay (void)
 {
-#ifndef HAVE_SDL
-	S9xTextMode();
-#endif
 	TakedownImage();
-#ifndef HAVE_SDL
-	XSync(GUI.display, False);
-	XCloseDisplay(GUI.display);
-#endif
+
+	SDL_Quit();
+
 	S9xBlitFilterDeinit();
 	S9xBlit2xSaIFilterDeinit();
 	S9xBlitHQ2xFilterDeinit();
@@ -704,107 +560,12 @@ static void TakedownImage (void)
 		GUI.filter_buffer = NULL;
 	}
 
-#ifndef HAVE_SDL
-	if (GUI.image)
-	{
-	#ifdef MITSHM
-		if (GUI.use_shared_memory)
-		{
-			XShmDetach(GUI.display, &GUI.sm_info);
-			GUI.image->data = NULL;
-			XDestroyImage(GUI.image);
-			if (GUI.sm_info.shmaddr)
-				shmdt(GUI.sm_info.shmaddr);
-			if (GUI.sm_info.shmid >= 0)
-				shmctl(GUI.sm_info.shmid, IPC_RMID, 0);
-			GUI.image = NULL;
-		}
-		else
-	#endif
-		{
-			XDestroyImage(GUI.image);
-			GUI.image = NULL;
-		}
-	}
-#endif
-
 	S9xGraphicsDeinit();
 }
 
 static void SetupImage (void)
 {
 	TakedownImage();
-
-#ifndef HAVE_SDL
-
-#ifdef MITSHM
-	GUI.use_shared_memory = TRUE;
-
-	int		major, minor;
-	Bool	shared;
-
-	if (!XShmQueryVersion(GUI.display, &major, &minor, &shared) || !shared)
-		GUI.image = NULL;
-	else
-		GUI.image = XShmCreateImage(GUI.display, GUI.visual, GUI.depth, ZPixmap, NULL, &GUI.sm_info, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2);
-
-	if (!GUI.image)
-		GUI.use_shared_memory = FALSE;
-	else
-	{
-		GUI.sm_info.shmid = shmget(IPC_PRIVATE, GUI.image->bytes_per_line * GUI.image->height, IPC_CREAT | 0777);
-		if (GUI.sm_info.shmid < 0)
-		{
-			XDestroyImage(GUI.image);
-			GUI.use_shared_memory = FALSE;
-		}
-		else
-		{
-			GUI.image->data = GUI.sm_info.shmaddr = (char *) shmat(GUI.sm_info.shmid, 0, 0);
-			if (!GUI.image->data)
-			{
-				XDestroyImage(GUI.image);
-				shmctl(GUI.sm_info.shmid, IPC_RMID, 0);
-				GUI.use_shared_memory = FALSE;
-			}
-			else
-			{
-				GUI.sm_info.readOnly = False;
-
-				XSetErrorHandler(ErrorHandler);
-				XShmAttach(GUI.display, &GUI.sm_info);
-				XSync(GUI.display, False);
-
-				// X Error handler might clear GUI.use_shared_memory if XShmAttach failed.
-				if (!GUI.use_shared_memory)
-				{
-					XDestroyImage(GUI.image);
-					shmdt(GUI.sm_info.shmaddr);
-					shmctl(GUI.sm_info.shmid, IPC_RMID, 0);
-				}
-			}
-		}
-	}
-
-	if (!GUI.use_shared_memory)
-	{
-		fprintf(stderr, "use_shared_memory failed, switching to XPutImage.\n");
-#endif
-		GUI.image = XCreateImage(GUI.display, GUI.visual, GUI.depth, ZPixmap, 0, NULL, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, BitmapUnit(GUI.display), 0);
-		GUI.image->data = (char *) malloc(GUI.image->bytes_per_line * GUI.image->height);
-		if (!GUI.image || !GUI.image->data)
-			FatalError("XCreateImage failed.");
-#ifdef MITSHM
-	}
-#endif
-
-#ifdef LSB_FIRST
-	GUI.image->byte_order = LSBFirst;
-#else
-	GUI.image->byte_order = MSBFirst;
-#endif
-
-#endif // HAVE_SDL
 
 	GFX.Pitch = SNES_WIDTH * 2 * 2;
 	GUI.snes_buffer = (uint8 *) calloc(GFX.Pitch * ((SNES_HEIGHT_EXTENDED + 4) * 2), 1);
@@ -817,25 +578,9 @@ static void SetupImage (void)
 	if (!GUI.filter_buffer)
 		FatalError("Failed to allocate GUI.filter_buffer.");
 
-#ifndef HAVE_SDL
-
-	if (GUI.depth == 15 || GUI.depth == 16)
-	{
-		GUI.blit_screen_pitch = GUI.image->bytes_per_line;
-		GUI.blit_screen       = (uint8 *) GUI.image->data;
-		GUI.need_convert      = FALSE;
-	}
-	else
-	{
-		GUI.blit_screen_pitch = (SNES_WIDTH * 2) * 2;
-		GUI.blit_screen       = GUI.filter_buffer;
-		GUI.need_convert      = TRUE;
-	}
-#else
         GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
         GUI.blit_screen       = (uint8 *) screen->pixels;
         GUI.need_convert      = FALSE;
-#endif
 
 	S9xGraphicsInit();
 }
@@ -924,125 +669,10 @@ void S9xPutImage (int width, int height)
 	prevHeight = height;
 }
 
-
-#ifndef HAVE_SDL
-
-static void Convert16To24 (int width, int height)
-{
-	if (GUI.pixel_format == 565)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			uint16	*s = (uint16 *) (GUI.blit_screen + y * GUI.blit_screen_pitch);
-			uint32	*d = (uint32 *) (GUI.image->data + y * GUI.image->bytes_per_line);
-
-			for (int x = 0; x < width; x++)
-			{
-				uint32	pixel = *s++;
-				*d++ = (((pixel >> 11) & 0x1f) << (GUI.red_shift + 3)) | (((pixel >> 6) & 0x1f) << (GUI.green_shift + 3)) | ((pixel & 0x1f) << (GUI.blue_shift + 3));
-			}
-		}
-	}
-	else
-	{
-		for (int y = 0; y < height; y++)
-		{
-			uint16	*s = (uint16 *) (GUI.blit_screen + y * GUI.blit_screen_pitch);
-			uint32	*d = (uint32 *) (GUI.image->data + y * GUI.image->bytes_per_line);
-
-			for (int x = 0; x < width; x++)
-			{
-				uint32	pixel = *s++;
-				*d++ = (((pixel >> 10) & 0x1f) << (GUI.red_shift + 3)) | (((pixel >> 5) & 0x1f) << (GUI.green_shift + 3)) | ((pixel & 0x1f) << (GUI.blue_shift + 3));
-			}
-		}
-	}
-}
-
-static void Convert16To24Packed (int width, int height)
-{
-	if (GUI.pixel_format == 565)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			uint16	*s = (uint16 *) (GUI.blit_screen + y * GUI.blit_screen_pitch);
-			uint8	*d = (uint8 *)  (GUI.image->data + y * GUI.image->bytes_per_line);
-
-		#ifdef LSB_FIRST
-			if (GUI.red_shift < GUI.blue_shift)
-		#else
-			if (GUI.red_shift > GUI.blue_shift)
-		#endif
-			{
-				for (int x = 0; x < width; x++)
-				{
-					uint32	pixel = *s++;
-					*d++ = (pixel >> (11 - 3)) & 0xf8;
-					*d++ = (pixel >>  (6 - 3)) & 0xf8;
-					*d++ = (pixel & 0x1f) << 3;
-				}
-			}
-			else
-			{
-				for (int x = 0; x < width; x++)
-				{
-					uint32	pixel = *s++;
-					*d++ = (pixel & 0x1f) << 3;
-					*d++ = (pixel >>  (6 - 3)) & 0xf8;
-					*d++ = (pixel >> (11 - 3)) & 0xf8;
-				}
-			}
-		}
-	}
-	else
-	{
-		for (int y = 0; y < height; y++)
-		{
-			uint16	*s = (uint16 *) (GUI.blit_screen + y * GUI.blit_screen_pitch);
-			uint8	*d = (uint8 *)  (GUI.image->data + y * GUI.image->bytes_per_line);
-
-		#ifdef LSB_FIRST
-			if (GUI.red_shift < GUI.blue_shift)
-		#else
-			if (GUI.red_shift > GUI.blue_shift)
-		#endif
-			{
-				for (int x = 0; x < width; x++)
-				{
-					uint32	pixel = *s++;
-					*d++ = (pixel >> (10 - 3)) & 0xf8;
-					*d++ = (pixel >>  (5 - 3)) & 0xf8;
-					*d++ = (pixel & 0x1f) << 3;
-				}
-			}
-			else
-			{
-				for (int x = 0; x < width; x++)
-				{
-					uint32	pixel = *s++;
-					*d++ = (pixel & 0x1f) << 3;
-					*d++ = (pixel >>  (5 - 3)) & 0xf8;
-					*d++ = (pixel >> (10 - 3)) & 0xf8;
-				}
-			}
-		}
-	}
-}
-
-#endif
-
 static void Repaint (bool8 isFrameBoundry)
 {
 #ifndef HAVE_SDL
 
-#ifdef MITSHM
-	if (GUI.use_shared_memory)
-	{
-		XShmPutImage(GUI.display, GUI.window, GUI.gc, GUI.image, 0, 0, 0, 0, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, False);
-		XSync(GUI.display, False);
-	}
-	else
-#endif
 		XPutImage(GUI.display, GUI.window, GUI.gc, GUI.image, 0, 0, 0, 0, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2);
 
 	Window			root, child;
@@ -1080,18 +710,6 @@ static void Repaint (bool8 isFrameBoundry)
         SDL_UpdateRect(screen, 0, 0, 0, 0);
 #endif
 }
-
-#ifndef HAVE_SDL
-void S9xTextMode (void)
-{
-	SetXRepeat(TRUE);
-}
-
-void S9xGraphicsMode (void)
-{
-	SetXRepeat(FALSE);
-}
-#endif
 
 #ifndef HAVE_SDL
 static bool8 CheckForPendingXEvents (Display *display)
@@ -1159,16 +777,8 @@ const char * S9xSelectFilename (const char *def, const char *dir1, const char *e
 	static char	s[PATH_MAX + 1];
 	char		buffer[PATH_MAX + 1];
 
-#ifndef HAVE_SDL
-	SetXRepeat(TRUE);
-#endif
-
 	printf("\n%s (default: %s): ", title, def);
 	fflush(stdout);
-
-#ifndef HAVE_SDL
-	SetXRepeat(FALSE);
-#endif
 
 	if (fgets(buffer, PATH_MAX + 1, stdin))
 	{
@@ -1268,7 +878,7 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 {
 	int	i, d;
 
-#ifndef HAVE_SDL // FIXME: should be modified in SDL say?
+#ifndef HAVE_SDL // FIXME: should be modified in SDL way?
 
 	if (!isdigit(n[1]) || !isdigit(n[2]) || n[3] != ':')
 		goto unrecog;
