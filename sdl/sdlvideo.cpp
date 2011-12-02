@@ -62,33 +62,12 @@
 
 struct GUIData
 {
-#ifndef HAVE_SDL
-	Display			*display;
-	Screen			*screen;
-	Visual			*visual;
-	GC				gc;
-	int				screen_num;
-	int				depth;
-	int				pixel_format;
-	int				bytes_per_pixel;
-	uint32			red_shift;
-	uint32			blue_shift;
-	uint32			green_shift;
-	uint32			red_size;
-	uint32			green_size;
-	uint32			blue_size;
-	Window			window;
-	XImage			*image;
-#endif
 	uint8			*snes_buffer;
 #ifndef HAVE_SDL
 	uint8			*filter_buffer;
 #endif
 	uint8			*blit_screen;
 	uint32			blit_screen_pitch;
-	bool8			need_convert;
-	Cursor			point_cursor;
-	Cursor			cross_hair_cursor;
 	int				video_mode;
 	int				mouse_x;
 	int				mouse_y;
@@ -148,8 +127,6 @@ void S9xExtraDisplayUsage (void)
 {
 	/*                               12345678901234567890123456789012345678901234567890123456789012345678901234567890 */
 
-	S9xMessage(S9X_INFO, S9X_USAGE, "-setrepeat                      Allow altering keyboard auto-repeat");
-	S9xMessage(S9X_INFO, S9X_USAGE, "");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v1                             Video mode: Blocky (default)");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v2                             Video mode: TV");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v3                             Video mode: Smooth");
@@ -163,9 +140,6 @@ void S9xExtraDisplayUsage (void)
 
 void S9xParseDisplayArg (char **argv, int &i, int argc)
 {
-	if (!strcasecmp(argv[i], "-setrepeat"))
-		GUI.no_repeat = FALSE;
-	else
 	if (!strncasecmp(argv[i], "-v", 2))
 	{
 		switch (argv[i][2])
@@ -321,8 +295,6 @@ const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 		keymaps.push_back(strpair_t("K00:slash",        "Superscope Pause"));
 	}
 
-	GUI.no_repeat = !conf.GetBool("Unix/X11::SetKeyRepeat", TRUE);
-
 	if (conf.Exists("Unix/X11::VideoMode"))
 	{
 		GUI.video_mode = conf.GetUInt("Unix/X11::VideoMode", VIDEOMODE_BLOCKY);
@@ -443,7 +415,6 @@ static void SetupImage (void)
 
         GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
         GUI.blit_screen       = (uint8 *) screen->pixels;
-        GUI.need_convert      = FALSE;
 
 	S9xGraphicsInit();
 }
@@ -528,37 +499,6 @@ void S9xPutImage (int width, int height)
 static void Repaint (bool8 isFrameBoundry)
 {
 #ifndef HAVE_SDL
-
-		XPutImage(GUI.display, GUI.window, GUI.gc, GUI.image, 0, 0, 0, 0, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2);
-
-	Window			root, child;
-	int				root_x, root_y, x, y;
-	unsigned int	mask;
-
-	// Use QueryPointer to sync X server and as a side effect also gets current pointer position for SNES mouse emulation.
-	XQueryPointer(GUI.display, GUI.window, &root, &child, &root_x, &root_y, &x, &y, &mask);
-
-	if (x >= 0 && y >= 0 && x < SNES_WIDTH * 2 && y < SNES_HEIGHT_EXTENDED * 2)
-	{
-		GUI.mouse_x = x >> 1;
-		GUI.mouse_y = y >> 1;
-
-		if (mask & Mod1Mask)
-		{
-			if (!GUI.mod1_pressed)
-			{
-				GUI.mod1_pressed = TRUE;
-				XDefineCursor(GUI.display, GUI.window, GUI.cross_hair_cursor);
-			}
-		}
-		else
-		if (GUI.mod1_pressed)
-		{
-			GUI.mod1_pressed = FALSE;
-			XDefineCursor(GUI.display, GUI.window, GUI.point_cursor);
-		}
-	}
-
 	if (Settings.DumpStreams && isFrameBoundry)
 		S9xVideoLogger(GUI.image->data, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, GUI.bytes_per_pixel, GUI.image->bytes_per_line);
 #endif
@@ -579,9 +519,11 @@ static bool8 CheckForPendingXEvents (Display *display)
 	return (XPending(display));
 #endif
 }
+#endif
 
 void S9xProcessEvents (bool8 block)
 {
+#ifndef HAVE_SDL
 	while (block || CheckForPendingXEvents(GUI.display))
 	{
 		XEvent	event;
@@ -626,8 +568,24 @@ void S9xProcessEvents (bool8 block)
 				break;
 		}
 	}
-}
+#else
+	SDL_Event event;
+
+	while ((block) || (SDL_PollEvent (&event) != 0)) {
+	  switch (event.type) {
+	  case SDL_KEYDOWN:
+	  case SDL_KEYUP:
+	    S9xReportButton(event.key.keysym.scancode, event.type == SDL_KEYDOWN);
+	    break;
+	  case SDL_QUIT:
+	    printf ("Quit Event. Bye.\n");
+
+	    S9xExit();
+	  }
+	}
+
 #endif
+}
 
 const char * S9xSelectFilename (const char *def, const char *dir1, const char *ext1, const char *title)
 {
@@ -692,18 +650,6 @@ void S9xSetTitle (const char *string)
 {
   SDL_WM_SetCaption(string, string);
 }
-
-#ifndef HAVE_SDL
-
-static void SetXRepeat (bool8 state)
-{
-	if (state)
-		XAutoRepeatOn(GUI.display);
-	else
-		XAutoRepeatOff(GUI.display);
-}
-
-#endif
 
 s9xcommand_t S9xGetDisplayCommandT (const char *n)
 {
