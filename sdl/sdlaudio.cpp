@@ -3,7 +3,7 @@
 
   See CREDITS file to find the copyright owners of this file.
 
-  SDL Audio/Video glue code (mostly borrowed from snes9x-gtk & drnoksnes)
+  SDL Audio/Video glue code (mostly borrowed from snes9x & drnoksnes)
   (c) Copyright 2011         Makoto Sugano (makoto.sugano@gmail.com)
 
   Snes9x homepage: http://www.snes9x.com/
@@ -47,11 +47,7 @@
 #endif
 
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/types.h>
-#ifdef HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
-#endif
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -71,12 +67,14 @@
 
 #ifdef HAVE_SDL
 #include <SDL/SDL.h>
+#include "sdl_snes9x.h"
 
 SDL_AudioSpec *audiospec;
+SUnixSettings	unixSettings;
 #endif
 
 // FIXME! How do I share the unixSettings among the files?
-//static SUnixSettings	unixSettings;
+//struct SUnixSettings	unixSettings;
 
 void S9xToggleSoundChannel (int c)
 {
@@ -121,8 +119,8 @@ bool8 S9xOpenSoundDevice (void)
 	audiospec->channels = Settings.Stereo ? 2 : 1;
 	audiospec->format = Settings.SixteenBitSound ? AUDIO_S16SYS : AUDIO_U8;
 	// FIXME!
-	//	audiospec->samples = (unixSettings.SoundBufferSize * audiospec->freq / 1000) >> 1;
-	audiospec->samples = (100 * audiospec->freq / 1000) >> 1;
+	audiospec->samples = (unixSettings.SoundBufferSize * audiospec->freq / 1000) >> 1;
+	//	audiospec->samples = (100 * audiospec->freq / 1000) >> 1;
 	audiospec->callback = sdl_audio_callback;
 
 	

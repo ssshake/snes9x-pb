@@ -3,7 +3,7 @@
 
   See CREDITS file to find the copyright owners of this file.
 
-  SDL Audio/Video glue code (mostly borrowed from snes9x-gtk & drnoksnes)
+  SDL Audio/Video glue code (mostly borrowed from snes9x & drnoksnes)
   (c) Copyright 2011         Makoto Sugano (makoto.sugano@gmail.com)
 
   Snes9x homepage: http://www.snes9x.com/
@@ -519,16 +519,6 @@ void S9xPutImage (int width, int height)
 		}
 	}
 
-#ifndef HAVE_SDL // conversion, not needed.
-	if (GUI.need_convert)
-	{
-		if (GUI.bytes_per_pixel == 3)
-			Convert16To24Packed(copyWidth, copyHeight);
-		else
-			Convert16To24(copyWidth, copyHeight);
-	}
-#endif
-
 	Repaint(TRUE);
 
 	prevWidth  = width;
@@ -571,9 +561,10 @@ static void Repaint (bool8 isFrameBoundry)
 
 	if (Settings.DumpStreams && isFrameBoundry)
 		S9xVideoLogger(GUI.image->data, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, GUI.bytes_per_pixel, GUI.image->bytes_per_line);
+#endif
 
-#else // FIXME: VideoLogger totally ignored.
-        SDL_UpdateRect(screen, 0, 0, 0, 0);
+#ifdef HAVE_SDL // FIXME: VideoLogger totally ignored.
+        SDL_Flip(screen);
 #endif
 }
 

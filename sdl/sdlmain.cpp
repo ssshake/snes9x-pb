@@ -3,7 +3,7 @@
 
   See CREDITS file to find the copyright owners of this file.
 
-  SDL Audio/Video glue code (mostly borrowed from snes9x-gtk & drnoksnes)
+  SDL Audio/Video glue code (mostly borrowed from snes9x & drnoksnes)
   (c) Copyright 2011         Makoto Sugano (makoto.sugano@gmail.com)
 
   Snes9x homepage: http://www.snes9x.com/
@@ -55,6 +55,7 @@
 
 #ifdef HAVE_SDL
 #include <SDL/SDL.h>
+#include "sdl_snes9x.h"
 #endif
 
 #ifdef JOYSTICK_SUPPORT
@@ -93,8 +94,6 @@ ConfigFile::secvec_t	keymaps;
 #define FIXED_POINT_SHIFT		16
 #define FIXED_POINT_REMAINDER	0xffff
 
-static const char	*sound_device = NULL;
-
 static const char	*s9x_base_dir        = NULL,
 					*rom_filename        = NULL,
 					*snapshot_filename   = NULL,
@@ -120,26 +119,6 @@ static const char	dirNames[13][32] =
 	""
 };
 
-struct SUnixSettings
-{
-	bool8	JoystickEnabled;
-	uint32	SoundBufferSize;
-	uint32	SoundFragmentSize;
-};
-
-struct SoundStatus
-{
-	int		sound_fd;
-	uint32	fragment_size;
-	uint32	err_counter;
-	uint32	err_rate;
-	int32	samples_mixed_so_far;
-	int32	play_position;
-};
-
-static SUnixSettings	unixSettings;
-static SoundStatus		so;
-
 #ifdef JOYSTICK_SUPPORT
 static uint8		js_mod[8]     = { 0, 0, 0, 0, 0, 0, 0, 0 };
 static int			js_fd[8]      = { -1, -1, -1, -1, -1, -1, -1, -1 };
@@ -160,8 +139,6 @@ bool S9xDisplayPollAxis (uint32, int16 *);
 bool S9xDisplayPollPointer (uint32, int16 *, int16 *);
 
 static long log2 (long);
-static void SoundTrigger (void);
-static void InitTimer (void);
 static void NSRTControllerSetup (void);
 static int make_snes9x_dirs (void);
 
@@ -260,8 +237,6 @@ void S9xExtraUsage (void)
 #endif
 
 	S9xMessage(S9X_INFO, S9X_USAGE, "-buffersize                     Sound generating buffer size in millisecond");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-fragmentsize                   Sound playback buffer fragment size in bytes");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-sounddev <string>              Specify sound device");
 	S9xMessage(S9X_INFO, S9X_USAGE, "");
 
 	S9xMessage(S9X_INFO, S9X_USAGE, "-loadsnapshot                   Load snapshot file at start");
@@ -316,14 +291,6 @@ void S9xParseArg (char **argv, int &i, int argc)
 	{
 		if (i + 1 < argc)
 			unixSettings.SoundBufferSize = atoi(argv[++i]);
-		else
-			S9xUsage();
-	}
-	else
-	if (!strcasecmp(argv[i], "-fragmentsize"))
-	{
-		if (i + 1 < argc)
-			unixSettings.SoundFragmentSize = atoi(argv[++i]);
 		else
 			S9xUsage();
 	}
@@ -459,8 +426,6 @@ void S9xParsePortConfig (ConfigFile &conf, int pass)
 #endif
 
 	unixSettings.SoundBufferSize   = conf.GetUInt     ("Unix::SoundBufferSize",     100);
-	unixSettings.SoundFragmentSize = conf.GetUInt     ("Unix::SoundFragmentSize",   2048);
-	sound_device                   = conf.GetStringDup("Unix::SoundDevice",         "/dev/dsp");
 
 	keymaps.clear();
 	if (!conf.GetBool("Unix::ClearAllControls", false))
@@ -1237,9 +1202,6 @@ int main (int argc, char **argv)
 	unixSettings.JoystickEnabled = FALSE;
 #endif
 	unixSettings.SoundBufferSize = 100;
-	unixSettings.SoundFragmentSize = 2048;
-
-	ZeroMemory(&so, sizeof(so));
 
 	CPU.Flags = 0;
 
@@ -1426,11 +1388,6 @@ int main (int argc, char **argv)
 #ifdef JOYSTICK_SUPPORT
 	uint32	JoypadSkip = 0;
 #endif
-
-#if 0 // domaemon
-	InitTimer();
-#endif
-
 
 	S9xSetSoundMute(FALSE);
 
