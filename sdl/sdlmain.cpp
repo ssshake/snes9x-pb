@@ -1,154 +1,10 @@
 /***********************************************************************************
   Snes9x - Portable Super Nintendo Entertainment System (TM) emulator.
 
-  (c) Copyright 1996 - 2002  Gary Henderson (gary.henderson@ntlworld.com),
-                             Jerremy Koot (jkoot@snes9x.com)
+  See CREDITS file to find the copyright owners of this file.
 
-  (c) Copyright 2002 - 2004  Matthew Kendora
-
-  (c) Copyright 2002 - 2005  Peter Bortas (peter@bortas.org)
-
-  (c) Copyright 2004 - 2005  Joel Yliluoma (http://iki.fi/bisqwit/)
-
-  (c) Copyright 2001 - 2006  John Weidman (jweidman@slip.net)
-
-  (c) Copyright 2002 - 2006  funkyass (funkyass@spam.shaw.ca),
-                             Kris Bleakley (codeviolation@hotmail.com)
-
-  (c) Copyright 2002 - 2010  Brad Jorsch (anomie@users.sourceforge.net),
-                             Nach (n-a-c-h@users.sourceforge.net),
-
-  (c) Copyright 2002 - 2011  zones (kasumitokoduck@yahoo.com)
-
-  (c) Copyright 2006 - 2007  nitsuja
-
-  (c) Copyright 2009 - 2011  BearOso,
-                             OV2
-
-
-  BS-X C emulator code
-  (c) Copyright 2005 - 2006  Dreamer Nom,
-                             zones
-
-  C4 x86 assembler and some C emulation code
-  (c) Copyright 2000 - 2003  _Demo_ (_demo_@zsnes.com),
-                             Nach,
-                             zsKnight (zsknight@zsnes.com)
-
-  C4 C++ code
-  (c) Copyright 2003 - 2006  Brad Jorsch,
-                             Nach
-
-  DSP-1 emulator code
-  (c) Copyright 1998 - 2006  _Demo_,
-                             Andreas Naive (andreasnaive@gmail.com),
-                             Gary Henderson,
-                             Ivar (ivar@snes9x.com),
-                             John Weidman,
-                             Kris Bleakley,
-                             Matthew Kendora,
-                             Nach,
-                             neviksti (neviksti@hotmail.com)
-
-  DSP-2 emulator code
-  (c) Copyright 2003         John Weidman,
-                             Kris Bleakley,
-                             Lord Nightmare (lord_nightmare@users.sourceforge.net),
-                             Matthew Kendora,
-                             neviksti
-
-  DSP-3 emulator code
-  (c) Copyright 2003 - 2006  John Weidman,
-                             Kris Bleakley,
-                             Lancer,
-                             z80 gaiden
-
-  DSP-4 emulator code
-  (c) Copyright 2004 - 2006  Dreamer Nom,
-                             John Weidman,
-                             Kris Bleakley,
-                             Nach,
-                             z80 gaiden
-
-  OBC1 emulator code
-  (c) Copyright 2001 - 2004  zsKnight,
-                             pagefault (pagefault@zsnes.com),
-                             Kris Bleakley
-                             Ported from x86 assembler to C by sanmaiwashi
-
-  SPC7110 and RTC C++ emulator code used in 1.39-1.51
-  (c) Copyright 2002         Matthew Kendora with research by
-                             zsKnight,
-                             John Weidman,
-                             Dark Force
-
-  SPC7110 and RTC C++ emulator code used in 1.52+
-  (c) Copyright 2009         byuu,
-                             neviksti
-
-  S-DD1 C emulator code
-  (c) Copyright 2003         Brad Jorsch with research by
-                             Andreas Naive,
-                             John Weidman
-
-  S-RTC C emulator code
-  (c) Copyright 2001 - 2006  byuu,
-                             John Weidman
-
-  ST010 C++ emulator code
-  (c) Copyright 2003         Feather,
-                             John Weidman,
-                             Kris Bleakley,
-                             Matthew Kendora
-
-  Super FX x86 assembler emulator code
-  (c) Copyright 1998 - 2003  _Demo_,
-                             pagefault,
-                             zsKnight
-
-  Super FX C emulator code
-  (c) Copyright 1997 - 1999  Ivar,
-                             Gary Henderson,
-                             John Weidman
-
-  Sound emulator code used in 1.5-1.51
-  (c) Copyright 1998 - 2003  Brad Martin
-  (c) Copyright 1998 - 2006  Charles Bilyue'
-
-  Sound emulator code used in 1.52+
-  (c) Copyright 2004 - 2007  Shay Green (gblargg@gmail.com)
-
-  SH assembler code partly based on x86 assembler code
-  (c) Copyright 2002 - 2004  Marcus Comstedt (marcus@mc.pp.se)
-
-  2xSaI filter
-  (c) Copyright 1999 - 2001  Derek Liauw Kie Fa
-
-  HQ2x, HQ3x, HQ4x filters
-  (c) Copyright 2003         Maxim Stepin (maxim@hiend3d.com)
-
-  NTSC filter
-  (c) Copyright 2006 - 2007  Shay Green
-
-  GTK+ GUI code
-  (c) Copyright 2004 - 2011  BearOso
-
-  Win32 GUI code
-  (c) Copyright 2003 - 2006  blip,
-                             funkyass,
-                             Matthew Kendora,
-                             Nach,
-                             nitsuja
-  (c) Copyright 2009 - 2011  OV2
-
-  Mac OS GUI code
-  (c) Copyright 1998 - 2001  John Stiles
-  (c) Copyright 2001 - 2011  zones
-
-
-  Specific ports contains the works of other authors. See headers in
-  individual files.
-
+  SDL Audio/Video glue code (mostly borrowed from snes9x-gtk & drnoksnes)
+  (c) Copyright 2011         Makoto Sugano (makoto.sugano@gmail.com)
 
   Snes9x homepage: http://www.snes9x.com/
 
@@ -175,6 +31,7 @@
   Nintendo Co., Limited and its subsidiary companies.
  ***********************************************************************************/
 
+#define HAVE_SDL 1
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -184,23 +41,22 @@
 #include <signal.h>
 #include <errno.h>
 #include <string.h>
+
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
-#ifdef USE_THREADS
-#include <sched.h>
-#include <pthread.h>
-#endif
+
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#ifndef NOSOUND
-#include <sys/soundcard.h>
-#include <sys/mman.h>
+
+#ifdef HAVE_SDL
+#include <SDL/SDL.h>
 #endif
+
 #ifdef JOYSTICK_SUPPORT
 #include <linux/joystick.h>
 #endif
@@ -229,8 +85,6 @@
 #endif
 #endif
 
-#define HAVE_SDL
-
 typedef std::pair<std::string, std::string>	strpair_t;
 
 ConfigFile::secvec_t	keymaps;
@@ -238,11 +92,6 @@ ConfigFile::secvec_t	keymaps;
 #define FIXED_POINT				0x10000
 #define FIXED_POINT_SHIFT		16
 #define FIXED_POINT_REMAINDER	0xffff
-#define SOUND_BUFFER_SIZE		(1024 * 16)
-#define SOUND_BUFFER_SIZE_MASK	(SOUND_BUFFER_SIZE - 1)
-
-static volatile bool8	block_signal         = FALSE;
-static volatile bool8	block_generate_sound = FALSE;
 
 static const char	*sound_device = NULL;
 
@@ -274,7 +123,6 @@ static const char	dirNames[13][32] =
 struct SUnixSettings
 {
 	bool8	JoystickEnabled;
-	bool8	ThreadSound;
 	uint32	SoundBufferSize;
 	uint32	SoundFragmentSize;
 };
@@ -291,15 +139,6 @@ struct SoundStatus
 
 static SUnixSettings	unixSettings;
 static SoundStatus		so;
-
-#ifndef NOSOUND
-static uint8			Buf[SOUND_BUFFER_SIZE];
-#endif
-
-#ifdef USE_THREADS
-static pthread_t		thread;
-static pthread_mutex_t	mutex;
-#endif
 
 #ifdef JOYSTICK_SUPPORT
 static uint8		js_mod[8]     = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -325,9 +164,7 @@ static void SoundTrigger (void);
 static void InitTimer (void);
 static void NSRTControllerSetup (void);
 static int make_snes9x_dirs (void);
-#ifndef NOSOUND
-static void * S9xProcessSound (void *);
-#endif
+
 #ifdef JOYSTICK_SUPPORT
 static void InitJoysticks (void);
 static void ReadJoysticks (void);
@@ -422,9 +259,6 @@ void S9xExtraUsage (void)
 	S9xMessage(S9X_INFO, S9X_USAGE, "");
 #endif
 
-#ifdef USE_THREADS
-	S9xMessage(S9X_INFO, S9X_USAGE, "-threadsound                    Use a separate thread to output sound");
-#endif
 	S9xMessage(S9X_INFO, S9X_USAGE, "-buffersize                     Sound generating buffer size in millisecond");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-fragmentsize                   Sound playback buffer fragment size in bytes");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-sounddev <string>              Specify sound device");
@@ -478,11 +312,6 @@ void S9xParseArg (char **argv, int &i, int argc)
 	}
 	else
 #endif
-#ifdef USE_THREADS
-	if (!strcasecmp(argv[i], "-threadsound"))
-		unixSettings.ThreadSound = TRUE;
-	else
-#endif
 	if (!strcasecmp(argv[i], "-buffersize"))
 	{
 		if (i + 1 < argc)
@@ -495,14 +324,6 @@ void S9xParseArg (char **argv, int &i, int argc)
 	{
 		if (i + 1 < argc)
 			unixSettings.SoundFragmentSize = atoi(argv[++i]);
-		else
-			S9xUsage();
-	}
-	else
-	if (!strcasecmp(argv[i], "-sounddev"))
-	{
-		if (i + 1 < argc)
-			sound_device = argv[++i];
 		else
 			S9xUsage();
 	}
@@ -637,9 +458,6 @@ void S9xParsePortConfig (ConfigFile &conf, int pass)
 	js_device[7]                   = conf.GetStringDup("Unix::PadDevice8",          NULL);
 #endif
 
-#ifdef USE_THREADS
-	unixSettings.ThreadSound       = conf.GetBool     ("Unix::ThreadSound",         false);
-#endif
 	unixSettings.SoundBufferSize   = conf.GetUInt     ("Unix::SoundBufferSize",     100);
 	unixSettings.SoundFragmentSize = conf.GetUInt     ("Unix::SoundFragmentSize",   2048);
 	sound_device                   = conf.GetStringDup("Unix::SoundDevice",         "/dev/dsp");
@@ -875,18 +693,6 @@ bool8 S9xContinueUpdate (int width, int height)
 	return (TRUE);
 }
 
-void S9xToggleSoundChannel (int c)
-{
-	static uint8	sound_switch = 255;
-
-	if (c == 8)
-		sound_switch = 255;
-	else
-		sound_switch ^= 1 << c;
-
-	S9xSetSoundControl(sound_switch);
-}
-
 void S9xAutoSaveSRAM (void)
 {
 	Memory.SaveSRAM(S9xGetFilename(".srm", SRAM_DIR));
@@ -894,7 +700,8 @@ void S9xAutoSaveSRAM (void)
 
 void S9xSyncSpeed (void)
 {
-#ifndef NOSOUND
+  // doemaemon: not sure how crucial this is atm.
+#ifdef HAVE_SDL
 	if (Settings.SoundSync)
 	{
 		while (!S9xSyncSound())
@@ -1352,169 +1159,6 @@ static void ReadJoysticks (void)
 
 #endif
 
-static void SoundTrigger (void)
-{
-#ifndef NOSOUND
-	S9xProcessSound(NULL);
-#endif
-}
-
-static void InitTimer (void)
-{
-#ifndef NOSOUND
-	struct itimerval	timeout;
-#endif
-	struct sigaction	sa;
-
-#ifdef USE_THREADS
-	if (unixSettings.ThreadSound)
-	{
-		pthread_mutex_init(&mutex, NULL);
-		pthread_create(&thread, NULL, S9xProcessSound, NULL);
-		return;
-	}
-#endif
-
-	sa.sa_handler = (SIG_PF) SoundTrigger;
-
-#ifdef SA_RESTART
-	sa.sa_flags = SA_RESTART;
-#else
-	sa.sa_flags = 0;
-#endif
-
-#ifndef NOSOUND // FIXME: Kludge to get calltree running. Remove later.
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGALRM, &sa, NULL);
-
-	timeout.it_interval.tv_sec  = 0;
-	timeout.it_interval.tv_usec = 10000;
-	timeout.it_value.tv_sec     = 0;
-	timeout.it_value.tv_usec    = 10000;
-	if (setitimer(ITIMER_REAL, &timeout, NULL) < 0)
-		perror("setitimer");
-#endif
-}
-
-bool8 S9xOpenSoundDevice (void)
-{
-#ifndef NOSOUND
-	int	J, K;
-
-	so.sound_fd = open(sound_device, O_WRONLY | O_NONBLOCK);
-	if (so.sound_fd == -1)
-		return (FALSE);
-
-	J = log2(unixSettings.SoundFragmentSize) | (3 << 16);
-	if (ioctl(so.sound_fd, SNDCTL_DSP_SETFRAGMENT, &J) == -1)
-		return (FALSE);
-
-	J = K = Settings.SixteenBitSound ? AFMT_S16_NE : AFMT_U8;
-	if (ioctl(so.sound_fd, SNDCTL_DSP_SETFMT,      &J) == -1 || J != K)
-		return (FALSE);
-
-	J = K = Settings.Stereo ? 1 : 0;
-	if (ioctl(so.sound_fd, SNDCTL_DSP_STEREO,      &J) == -1 || J != K)
-		return (FALSE);
-
-	J = K = Settings.SoundPlaybackRate;
-	if (ioctl(so.sound_fd, SNDCTL_DSP_SPEED,       &J) == -1 || J != K)
-		return (FALSE);
-
-	J = 0;
-	if (ioctl(so.sound_fd, SNDCTL_DSP_GETBLKSIZE,  &J) == -1)
-		return (FALSE);
-
-	so.fragment_size = J;
-	printf("fragment size: %d\n", J);
-#endif
-
-	return (TRUE);
-}
-
-#ifndef NOSOUND
-
-static void * S9xProcessSound (void *)
-{
-	// If threads in use, this is to loop indefinitely.
-	// If not, this will be called by timer.
-
-	audio_buf_info	info;
-	if (!unixSettings.ThreadSound && (ioctl(so.sound_fd, SNDCTL_DSP_GETOSPACE, &info) == -1 || info.bytes < (int) so.fragment_size))
-		return (NULL);
-
-#ifdef USE_THREADS
-	do
-	{
-#endif
-
-	int	sample_count = so.fragment_size;
-	if (Settings.SixteenBitSound)
-		sample_count >>= 1;
-
-#ifdef USE_THREADS
-	if (unixSettings.ThreadSound)
-		pthread_mutex_lock(&mutex);
-	else
-#endif
-	if (block_signal)
-		return (NULL);
-
-	block_generate_sound = TRUE;
-
-	if (so.samples_mixed_so_far < sample_count)
-	{
-		unsigned	ofs = so.play_position + (Settings.SixteenBitSound ? (so.samples_mixed_so_far << 1) : so.samples_mixed_so_far);
-		S9xMixSamples(Buf + (ofs & SOUND_BUFFER_SIZE_MASK), sample_count - so.samples_mixed_so_far);
-		so.samples_mixed_so_far = sample_count;
-	}
-
-	unsigned	bytes_to_write = sample_count;
-	if (Settings.SixteenBitSound)
-		bytes_to_write <<= 1;
-
-	unsigned	byte_offset = so.play_position;
-	so.play_position += bytes_to_write;
-	so.play_position &= SOUND_BUFFER_SIZE_MASK;
-
-#ifdef USE_THREADS
-	if (unixSettings.ThreadSound)
-		pthread_mutex_unlock(&mutex);
-#endif
-
-	block_generate_sound = FALSE;
-
-	for (;;)
-	{
-		int	I = bytes_to_write;
-		if (byte_offset + I > SOUND_BUFFER_SIZE)
-			I = SOUND_BUFFER_SIZE - byte_offset;
-		if (I == 0)
-			break;
-
-		I = write(so.sound_fd, (char *) Buf + byte_offset, I);
-		if (I > 0)
-		{
-			bytes_to_write -= I;
-			byte_offset += I;
-			byte_offset &= SOUND_BUFFER_SIZE_MASK;
-		}
-		else
-		if (I < 0 && errno != EINTR)
-			break;
-	}
-
-	so.samples_mixed_so_far -= sample_count;
-
-#ifdef USE_THREADS
-	} while (unixSettings.ThreadSound);
-#endif
-
-	return (NULL);
-}
-
-#endif
-
 void S9xExit (void)
 {
 	S9xMovieShutdown();
@@ -1592,7 +1236,6 @@ int main (int argc, char **argv)
 #else
 	unixSettings.JoystickEnabled = FALSE;
 #endif
-	unixSettings.ThreadSound = TRUE;
 	unixSettings.SoundBufferSize = 100;
 	unixSettings.SoundFragmentSize = 2048;
 
@@ -1784,7 +1427,11 @@ int main (int argc, char **argv)
 	uint32	JoypadSkip = 0;
 #endif
 
+#if 0 // domaemon
 	InitTimer();
+#endif
+
+
 	S9xSetSoundMute(FALSE);
 
 #ifdef NETPLAY_SUPPORT
