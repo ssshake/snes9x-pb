@@ -73,9 +73,6 @@ SDL_AudioSpec *audiospec;
 SUnixSettings	unixSettings;
 #endif
 
-// FIXME! How do I share the unixSettings among the files?
-//struct SUnixSettings	unixSettings;
-
 void S9xToggleSoundChannel (int c)
 {
 	static uint8	sound_switch = 255;
@@ -118,14 +115,10 @@ bool8 S9xOpenSoundDevice (void)
 	audiospec->freq = Settings.SoundPlaybackRate;
 	audiospec->channels = Settings.Stereo ? 2 : 1;
 	audiospec->format = Settings.SixteenBitSound ? AUDIO_S16SYS : AUDIO_U8;
-	// FIXME!
 	audiospec->samples = (unixSettings.SoundBufferSize * audiospec->freq / 1000) >> 1;
-	//	audiospec->samples = (100 * audiospec->freq / 1000) >> 1;
 	audiospec->callback = sdl_audio_callback;
-
 	
 	printf ("SDL sound driver initializing...\n");
-
 	printf ("    --> (Frequency: %dhz, Latency: %dms)...",
 		audiospec->freq,
 		(audiospec->samples * 1000 / audiospec->freq) << 1);

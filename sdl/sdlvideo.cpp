@@ -110,23 +110,14 @@ enum
 #ifndef HAVE_SDL
 static int ErrorHandler (Display *, XErrorEvent *);
 static bool8 CheckForPendingXEvents (Display *);
-static void SetXRepeat (bool8);
 #endif
 
 static void SetupImage (void);
 static void TakedownImage (void);
 static void Repaint (bool8);
 
-#ifndef HAVE_SDL
-static void Convert16To24 (int, int);
-static void Convert16To24Packed (int, int);
-#endif
-
-
 void S9xExtraDisplayUsage (void)
 {
-	/*                               12345678901234567890123456789012345678901234567890123456789012345678901234567890 */
-
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v1                             Video mode: Blocky (default)");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v2                             Video mode: TV");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v3                             Video mode: Smooth");
@@ -383,14 +374,6 @@ static void TakedownImage (void)
 		GUI.snes_buffer = NULL;
 	}
 
-#ifndef HAVE_SDL
-	if (GUI.filter_buffer)
-	{
-		free(GUI.filter_buffer);
-		GUI.filter_buffer = NULL;
-	}
-#endif
-
 	S9xGraphicsDeinit();
 }
 
@@ -479,6 +462,7 @@ void S9xPutImage (int width, int height)
 	// domaemon: this is place where the rendering buffer size should be changed?
 	blitFn((uint8 *) GFX.Screen, GFX.Pitch, GUI.blit_screen, GUI.blit_screen_pitch, width, height);
 
+	// domaemon: does the height change on the fly?
 	if (height < prevHeight)
 	{
 		int	p = GUI.blit_screen_pitch >> 2;
@@ -498,12 +482,10 @@ void S9xPutImage (int width, int height)
 
 static void Repaint (bool8 isFrameBoundry)
 {
-#ifndef HAVE_SDL
+#ifndef HAVE_SDL // FIXME: VideoLogger totally ignored.
 	if (Settings.DumpStreams && isFrameBoundry)
 		S9xVideoLogger(GUI.image->data, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, GUI.bytes_per_pixel, GUI.image->bytes_per_line);
-#endif
-
-#ifdef HAVE_SDL // FIXME: VideoLogger totally ignored.
+#else
         SDL_Flip(screen);
 #endif
 }
@@ -575,7 +557,8 @@ void S9xProcessEvents (bool8 block)
 	  switch (event.type) {
 	  case SDL_KEYDOWN:
 	  case SDL_KEYUP:
-	    S9xReportButton(event.key.keysym.scancode, event.type == SDL_KEYDOWN);
+	    printf ("%d \n", event.key.keysym.scancode);
+	    S9xReportButton(39, 1);
 	    break;
 	  case SDL_QUIT:
 	    printf ("Quit Event. Bye.\n");
