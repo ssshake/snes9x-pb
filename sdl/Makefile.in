@@ -30,7 +30,7 @@ CC         = @CC@
 GASM       = @CXX@
 INCLUDES   = -I. -I.. -I../apu/ -I../unzip/ -I../jma/ -I../filter/
 
-CCFLAGS    = @S9XFLGS@ @S9XDEFS@ $(DEFS)
+CCFLAGS    = @S9XFLGS@ @S9XDEFS@ $(DEFS) -g -pg
 CFLAGS     = $(CCFLAGS)
 
 .SUFFIXES: .o .cpp .c .cc .h .m .i .s .obj

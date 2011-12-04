@@ -43,11 +43,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/keysym.h>
-#include <X11/cursorfont.h>
-
 #include "snes9x.h"
 #include "memmap.h"
 #include "ppu.h"
@@ -59,6 +54,16 @@
 #include "display.h"
 
 #define HAVE_SDL 1
+
+#ifdef HAVE_SDL
+
+#include <SDL/SDL.h>
+#include <iostream>
+SDL_Surface *screen;
+using namespace std;
+std::map <string, int> name_sdlkeysym;
+
+#endif
 
 struct GUIData
 {
@@ -107,11 +112,6 @@ enum
 	VIDEOMODE_HQ2X
 };
 
-#ifndef HAVE_SDL
-static int ErrorHandler (Display *, XErrorEvent *);
-static bool8 CheckForPendingXEvents (Display *);
-#endif
-
 static void SetupImage (void);
 static void TakedownImage (void);
 static void Repaint (bool8);
@@ -154,136 +154,36 @@ const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 	if (pass != 1)
 		return ("Unix/X11");
 
+	// domaemon: FIXME, just collecting the essentials.
+	// domaemon: *) here we define the keymapping.
 	if (!conf.GetBool("Unix::ClearAllControls", false))
 	{
-		keymaps.push_back(strpair_t("K00:k",            "Joypad1 Right"));
-		keymaps.push_back(strpair_t("K00:Right",        "Joypad1 Right"));
-		keymaps.push_back(strpair_t("K00:h",            "Joypad1 Left"));
-		keymaps.push_back(strpair_t("K00:Left",         "Joypad1 Left"));
-		keymaps.push_back(strpair_t("K00:j",            "Joypad1 Down"));
-		keymaps.push_back(strpair_t("K00:n",            "Joypad1 Down"));
-		keymaps.push_back(strpair_t("K00:Down",         "Joypad1 Down"));
-		keymaps.push_back(strpair_t("K00:u",            "Joypad1 Up"));
-		keymaps.push_back(strpair_t("K00:Up",           "Joypad1 Up"));
-		keymaps.push_back(strpair_t("K00:Return",       "Joypad1 Start"));
-		keymaps.push_back(strpair_t("K00:space",        "Joypad1 Select"));
-		keymaps.push_back(strpair_t("K00:S+d",          "Joypad1 ToggleTurbo A"));
-		keymaps.push_back(strpair_t("K00:C+d",          "Joypad1 ToggleSticky A"));
-		keymaps.push_back(strpair_t("K00:d",            "Joypad1 A"));
-		keymaps.push_back(strpair_t("K00:S+c",          "Joypad1 ToggleTurbo B"));
-		keymaps.push_back(strpair_t("K00:C+c",          "Joypad1 ToggleSticky B"));
-		keymaps.push_back(strpair_t("K00:c",            "Joypad1 B"));
-		keymaps.push_back(strpair_t("K00:S+s",          "Joypad1 ToggleTurbo X"));
-		keymaps.push_back(strpair_t("K00:C+s",          "Joypad1 ToggleSticky X"));
-		keymaps.push_back(strpair_t("K00:s",            "Joypad1 X"));
-		keymaps.push_back(strpair_t("K00:S+x",          "Joypad1 ToggleTurbo Y"));
-		keymaps.push_back(strpair_t("K00:C+x",          "Joypad1 ToggleSticky Y"));
-		keymaps.push_back(strpair_t("K00:x",            "Joypad1 Y"));
-		keymaps.push_back(strpair_t("K00:S+a",          "Joypad1 ToggleTurbo L"));
-		keymaps.push_back(strpair_t("K00:S+v",          "Joypad1 ToggleTurbo L"));
-		keymaps.push_back(strpair_t("K00:C+a",          "Joypad1 ToggleSticky L"));
-		keymaps.push_back(strpair_t("K00:C+v",          "Joypad1 ToggleSticky L"));
-		keymaps.push_back(strpair_t("K00:a",            "Joypad1 L"));
-		keymaps.push_back(strpair_t("K00:v",            "Joypad1 L"));
-		keymaps.push_back(strpair_t("K00:S+z",          "Joypad1 ToggleTurbo R"));
-		keymaps.push_back(strpair_t("K00:C+z",          "Joypad1 ToggleSticky R"));
-		keymaps.push_back(strpair_t("K00:z",            "Joypad1 R"));
+		keymaps.push_back(strpair_t("K00:SDLK_RIGHT",        "Joypad1 Right"));
+		keymaps.push_back(strpair_t("K00:SDLK_LEFT",         "Joypad1 Left"));
+		keymaps.push_back(strpair_t("K00:SDLK_DOWN",         "Joypad1 Down"));
+		keymaps.push_back(strpair_t("K00:SDLK_UP",           "Joypad1 Up"));
+		keymaps.push_back(strpair_t("K00:SDLK_RETURN",       "Joypad1 Start"));
+		keymaps.push_back(strpair_t("K00:SDLK_SPACE",        "Joypad1 Select"));
+		keymaps.push_back(strpair_t("K00:SDLK_d",            "Joypad1 A"));
+		keymaps.push_back(strpair_t("K00:SDLK_c",            "Joypad1 B"));
+		keymaps.push_back(strpair_t("K00:SDLK_s",            "Joypad1 X"));
+		keymaps.push_back(strpair_t("K00:SDLK_x",            "Joypad1 Y"));
+		keymaps.push_back(strpair_t("K00:SDLK_a",            "Joypad1 L"));
+		keymaps.push_back(strpair_t("K00:SDLK_z",            "Joypad1 R"));
 
-		keymaps.push_back(strpair_t("K00:KP_Left",      "Joypad2 Left"));
-		keymaps.push_back(strpair_t("K00:KP_Right",     "Joypad2 Right"));
-		keymaps.push_back(strpair_t("K00:KP_Up",        "Joypad2 Up"));
-		keymaps.push_back(strpair_t("K00:KP_Down",      "Joypad2 Down"));
-		keymaps.push_back(strpair_t("K00:KP_Enter",     "Joypad2 Start"));
-		keymaps.push_back(strpair_t("K00:KP_Add",       "Joypad2 Select"));
-		keymaps.push_back(strpair_t("K00:Prior",        "Joypad2 A"));
-		keymaps.push_back(strpair_t("K00:Next",         "Joypad2 B"));
-		keymaps.push_back(strpair_t("K00:Home",         "Joypad2 X"));
-		keymaps.push_back(strpair_t("K00:End",          "Joypad2 Y"));
-		keymaps.push_back(strpair_t("K00:Insert",       "Joypad2 L"));
-		keymaps.push_back(strpair_t("K00:Delete",       "Joypad2 R"));
-
-		keymaps.push_back(strpair_t("K00:A+F4",         "SoundChannel0"));
-		keymaps.push_back(strpair_t("K00:C+F4",         "SoundChannel0"));
-		keymaps.push_back(strpair_t("K00:A+F5",         "SoundChannel1"));
-		keymaps.push_back(strpair_t("K00:C+F5",         "SoundChannel1"));
-		keymaps.push_back(strpair_t("K00:A+F6",         "SoundChannel2"));
-		keymaps.push_back(strpair_t("K00:C+F6",         "SoundChannel2"));
-		keymaps.push_back(strpair_t("K00:A+F7",         "SoundChannel3"));
-		keymaps.push_back(strpair_t("K00:C+F7",         "SoundChannel3"));
-		keymaps.push_back(strpair_t("K00:A+F8",         "SoundChannel4"));
-		keymaps.push_back(strpair_t("K00:C+F8",         "SoundChannel4"));
-		keymaps.push_back(strpair_t("K00:A+F9",         "SoundChannel5"));
-		keymaps.push_back(strpair_t("K00:C+F9",         "SoundChannel5"));
-		keymaps.push_back(strpair_t("K00:A+F10",        "SoundChannel6"));
-		keymaps.push_back(strpair_t("K00:C+F10",        "SoundChannel6"));
-		keymaps.push_back(strpair_t("K00:A+F11",        "SoundChannel7"));
-		keymaps.push_back(strpair_t("K00:C+F11",        "SoundChannel7"));
-		keymaps.push_back(strpair_t("K00:A+F12",        "SoundChannelsOn"));
-		keymaps.push_back(strpair_t("K00:C+F12",        "SoundChannelsOn"));
-
-		keymaps.push_back(strpair_t("K00:S+1",          "BeginRecordingMovie"));
-		keymaps.push_back(strpair_t("K00:S+2",          "EndRecordingMovie"));
-		keymaps.push_back(strpair_t("K00:S+3",          "LoadMovie"));
-		keymaps.push_back(strpair_t("K00:A+F1",         "SaveSPC"));
-		keymaps.push_back(strpair_t("K00:C+F1",         "SaveSPC"));
-		keymaps.push_back(strpair_t("K00:F10",          "LoadOopsFile"));
-		keymaps.push_back(strpair_t("K00:A+F2",         "LoadFreezeFile"));
-		keymaps.push_back(strpair_t("K00:C+F2",         "LoadFreezeFile"));
-		keymaps.push_back(strpair_t("K00:F11",          "LoadFreezeFile"));
-		keymaps.push_back(strpair_t("K00:A+F3",         "SaveFreezeFile"));
-		keymaps.push_back(strpair_t("K00:C+F3",         "SaveFreezeFile"));
-		keymaps.push_back(strpair_t("K00:F12",          "SaveFreezeFile"));
-		keymaps.push_back(strpair_t("K00:F1",           "QuickLoad000"));
-		keymaps.push_back(strpair_t("K00:F2",           "QuickLoad001"));
-		keymaps.push_back(strpair_t("K00:F3",           "QuickLoad002"));
-		keymaps.push_back(strpair_t("K00:F4",           "QuickLoad003"));
-		keymaps.push_back(strpair_t("K00:F5",           "QuickLoad004"));
-		keymaps.push_back(strpair_t("K00:F6",           "QuickLoad005"));
-		keymaps.push_back(strpair_t("K00:F7",           "QuickLoad006"));
-		keymaps.push_back(strpair_t("K00:F8",           "QuickLoad007"));
-		keymaps.push_back(strpair_t("K00:F9",           "QuickLoad008"));
-		keymaps.push_back(strpair_t("K00:S+F1",         "QuickSave000"));
-		keymaps.push_back(strpair_t("K00:S+F2",         "QuickSave001"));
-		keymaps.push_back(strpair_t("K00:S+F3",         "QuickSave002"));
-		keymaps.push_back(strpair_t("K00:S+F4",         "QuickSave003"));
-		keymaps.push_back(strpair_t("K00:S+F5",         "QuickSave004"));
-		keymaps.push_back(strpair_t("K00:S+F6",         "QuickSave005"));
-		keymaps.push_back(strpair_t("K00:S+F7",         "QuickSave006"));
-		keymaps.push_back(strpair_t("K00:S+F8",         "QuickSave007"));
-		keymaps.push_back(strpair_t("K00:S+F9",         "QuickSave008"));
-
-		keymaps.push_back(strpair_t("K00:Scroll_Lock",  "Pause"));
-		keymaps.push_back(strpair_t("K00:CS+Escape",    "Reset"));
-		keymaps.push_back(strpair_t("K00:S+Escape",     "SoftReset"));
-		keymaps.push_back(strpair_t("K00:Escape",       "ExitEmu"));
-		keymaps.push_back(strpair_t("K00:Tab",          "EmuTurbo"));
-		keymaps.push_back(strpair_t("K00:S+Tab",        "ToggleEmuTurbo"));
-		keymaps.push_back(strpair_t("K00:A+equal",      "IncEmuTurbo"));
-		keymaps.push_back(strpair_t("K00:A+minus",      "DecEmuTurbo"));
-		keymaps.push_back(strpair_t("K00:C+equal",      "IncTurboSpeed"));
-		keymaps.push_back(strpair_t("K00:C+minus",      "DecTurboSpeed"));
-		keymaps.push_back(strpair_t("K00:equal",        "IncFrameRate"));
-		keymaps.push_back(strpair_t("K00:minus",        "DecFrameRate"));
-		keymaps.push_back(strpair_t("K00:S+equal",      "IncFrameTime"));
-		keymaps.push_back(strpair_t("K00:S+minus",      "DecFrameTime"));
-		keymaps.push_back(strpair_t("K00:6",            "SwapJoypads"));
-		keymaps.push_back(strpair_t("K00:Print",        "Screenshot"));
-
-		keymaps.push_back(strpair_t("K00:1",            "ToggleBG0"));
-		keymaps.push_back(strpair_t("K00:2",            "ToggleBG1"));
-		keymaps.push_back(strpair_t("K00:3",            "ToggleBG2"));
-		keymaps.push_back(strpair_t("K00:4",            "ToggleBG3"));
-		keymaps.push_back(strpair_t("K00:5",            "ToggleSprites"));
-		keymaps.push_back(strpair_t("K00:9",            "ToggleTransparency"));
-		keymaps.push_back(strpair_t("K00:BackSpace",    "ClipWindows"));
-		keymaps.push_back(strpair_t("K00:A+Escape",     "Debugger"));
-
-		keymaps.push_back(strpair_t("M00:B0",           "{Mouse1 L,Superscope Fire,Justifier1 Trigger}"));
-		keymaps.push_back(strpair_t("M00:B1",           "{Justifier1 AimOffscreen Trigger,Superscope AimOffscreen}"));
-		keymaps.push_back(strpair_t("M00:B2",           "{Mouse1 R,Superscope Cursor,Justifier1 Start}"));
-		keymaps.push_back(strpair_t("M00:Pointer",      "Pointer Mouse1+Superscope+Justifier1"));
-		keymaps.push_back(strpair_t("K00:grave",        "Superscope ToggleTurbo"));
-		keymaps.push_back(strpair_t("K00:slash",        "Superscope Pause"));
+		// domaemon: *) GetSDLKeyFromName().
+		name_sdlkeysym["SDLK_s"] = SDLK_s;
+		name_sdlkeysym["SDLK_d"] = SDLK_d;
+		name_sdlkeysym["SDLK_x"] = SDLK_x;
+		name_sdlkeysym["SDLK_c"] = SDLK_c;
+		name_sdlkeysym["SDLK_a"] = SDLK_a;
+		name_sdlkeysym["SDLK_z"] = SDLK_z;
+		name_sdlkeysym["SDLK_UP"] = SDLK_UP;
+		name_sdlkeysym["SDLK_DOWN"] = SDLK_DOWN;
+		name_sdlkeysym["SDLK_RIGHT"] = SDLK_RIGHT;
+		name_sdlkeysym["SDLK_LEFT"] = SDLK_LEFT;
+		name_sdlkeysym["SDLK_RETURN"] = SDLK_RETURN;
+		name_sdlkeysym["SDLK_SPACE"] = SDLK_SPACE;
 	}
 
 	if (conf.Exists("Unix/X11::VideoMode"))
@@ -295,6 +195,7 @@ const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 	else
 		GUI.video_mode = VIDEOMODE_BLOCKY;
 
+
 	return ("Unix/X11");
 }
 
@@ -303,15 +204,6 @@ static void FatalError (const char *str)
 	fprintf(stderr, "%s\n", str);
 	S9xExit();
 }
-
-static int ErrorHandler (Display *display, XErrorEvent *event)
-{
-	return (0);
-}
-
-
-#include <SDL/SDL.h>
-SDL_Surface *screen;
 
 void S9xInitDisplay (int argc, char **argv)
 {
@@ -388,7 +280,8 @@ static void SetupImage (void)
 	if (!GUI.snes_buffer)
 		FatalError("Failed to allocate GUI.snes_buffer.");
 
-	GFX.Screen = (uint16 *) (GUI.snes_buffer + (GFX.Pitch * 2 * 2)); // domaemon: Add 2 lines before drawing.
+	// domaemon: Add 2 lines before drawing.
+	GFX.Screen = (uint16 *) (GUI.snes_buffer + (GFX.Pitch * 2 * 2));
 
 #ifndef HAVE_SDL // domaemon: this is used as the destination buffer in the original unix code.
 	GUI.filter_buffer = (uint8 *) calloc((SNES_WIDTH * 2) * 2 * (SNES_HEIGHT_EXTENDED * 2), 1);
@@ -482,83 +375,20 @@ void S9xPutImage (int width, int height)
 
 static void Repaint (bool8 isFrameBoundry)
 {
-#ifndef HAVE_SDL // FIXME: VideoLogger totally ignored.
-	if (Settings.DumpStreams && isFrameBoundry)
-		S9xVideoLogger(GUI.image->data, SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, GUI.bytes_per_pixel, GUI.image->bytes_per_line);
-#else
         SDL_Flip(screen);
-#endif
 }
-
-#ifndef HAVE_SDL
-static bool8 CheckForPendingXEvents (Display *display)
-{
-#ifdef SELECT_BROKEN_FOR_SIGNALS
-	int	arg = 0;
-
-	return (XEventsQueued(display, QueuedAlready) || (ioctl(ConnectionNumber(display), FIONREAD, &arg) == 0 && arg));
-#else
-	return (XPending(display));
-#endif
-}
-#endif
 
 void S9xProcessEvents (bool8 block)
 {
-#ifndef HAVE_SDL
-	while (block || CheckForPendingXEvents(GUI.display))
-	{
-		XEvent	event;
-
-		XNextEvent(GUI.display, &event);
-		block = FALSE;
-
-		switch (event.type)
-		{
-			case KeyPress:
-			case KeyRelease:
-				S9xReportButton(((event.xkey.state & (ShiftMask | Mod1Mask | ControlMask | Mod4Mask)) << 8) | event.xkey.keycode, event.type == KeyPress);
-			#if 1
-				{
-					KeyCode	kc = XKeysymToKeycode(GUI.display, XKeycodeToKeysym(GUI.display, event.xkey.keycode, 0));
-					if (event.xkey.keycode != kc)
-						S9xReportButton(((event.xkey.state & (ShiftMask | Mod1Mask | ControlMask | Mod4Mask)) << 8) | kc, event.type == KeyPress);
-				}
-			#endif
-				break;
-
-			case FocusIn:
-				SetXRepeat(FALSE);
-				XFlush(GUI.display);
-				break;
-
-			case FocusOut:
-				SetXRepeat(TRUE);
-				XFlush(GUI.display);
-				break;
-
-			case ConfigureNotify:
-				break;
-
-			case ButtonPress:
-			case ButtonRelease:
-				S9xReportButton(0x40000000 | (event.xbutton.button - 1), event.type == ButtonPress);
-				break;
-
-			case Expose:
-				Repaint(FALSE);
-				break;
-		}
-	}
-#else
 	SDL_Event event;
 
 	while ((block) || (SDL_PollEvent (&event) != 0)) {
 	  switch (event.type) {
 	  case SDL_KEYDOWN:
 	  case SDL_KEYUP:
-	    printf ("%d \n", event.key.keysym.scancode);
-	    S9xReportButton(39, 1);
+	    //	    printf ("%d \n", event.key.keysym.sym);
+	    S9xReportButton(event.key.keysym.sym, event.type == SDL_KEYDOWN);
+	    //	    printf( "%s\n", SDL_GetKeyName(event.key.keysym.sym));
 	    break;
 	  case SDL_QUIT:
 	    printf ("Quit Event. Bye.\n");
@@ -566,8 +396,6 @@ void S9xProcessEvents (bool8 block)
 	    S9xExit();
 	  }
 	}
-
-#endif
 }
 
 const char * S9xSelectFilename (const char *def, const char *dir1, const char *ext1, const char *title)
@@ -659,6 +487,7 @@ void S9xHandleDisplayCommand (s9xcommand_t cmd, int16 data1, int16 data2)
 	return;
 }
 
+// domaemon: 2) here we send the keymapping request to the SNES9X
 bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 {
 	int	i, d;
@@ -672,8 +501,7 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 	{
 		case 'K':
 		{
-			KeyCode	kc;
-			KeySym	ks;
+		  int key;
 
 			d |= 0x00000000;
 
@@ -681,33 +509,16 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 
 			if (n[i] == '\0' || i == 4)
 				i = 4;
-			else
-			{
-				for (i = 4; n[i] != '+'; i++)
-				{
-					switch (n[i])
-					{
-						case 'S': d |= ShiftMask   << 8; break;
-						case 'C': d |= ControlMask << 8; break;
-						case 'A': d |= Mod1Mask    << 8; break;
-						case 'M': d |= Mod4Mask    << 8; break;
-						default:  goto unrecog;
-					}
-				}
+#if 1
+			string keyname (n + i);
+			//			cout << keyname << endl;
+			//			printf ("%d\n", name_sdlkeysym[keyname]);
+			key = name_sdlkeysym[keyname];
 
-				i++;
-			}
-
-#ifndef HAVE_SDL
-			if ((ks = XStringToKeysym(n + i)) == NoSymbol)
-				goto unrecog;
-			if ((kc = XKeysymToKeycode(GUI.display, ks)) == 0)
-				goto unrecog;
+			d |= key & 0xff;
 #endif
 
-			d |= kc & 0xff;
-
-			return (S9xMapButton(d, *cmd, false));
+			return (S9xMapButton(key, *cmd, false));
 		}
 
 		case 'M':

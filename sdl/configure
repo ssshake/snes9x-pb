@@ -577,7 +577,7 @@ PACKAGE_VERSION='1.53'
 PACKAGE_STRING='Snes9x 1.53'
 PACKAGE_BUGREPORT=''
 
-ac_unique_file="unix.cpp"
+ac_unique_file="sdlmain.cpp"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>

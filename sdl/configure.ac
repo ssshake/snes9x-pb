@@ -2,7 +2,7 @@ AC_PREREQ([2.60])
 AC_INIT([Snes9x], [1.53], [], [snes9x])
 AC_REVISION([$Revision: 1.53 $])
 
-AC_CONFIG_SRCDIR([unix.cpp])
+AC_CONFIG_SRCDIR([sdlmain.cpp])
 
 AC_CANONICAL_TARGET
 
