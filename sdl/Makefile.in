@@ -35,7 +35,7 @@ CFLAGS     = $(CCFLAGS)
 
 .SUFFIXES: .o .cpp .c .cc .h .m .i .s .obj
 
-all: Makefile configure snes9x
+all: Makefile configure snes9x-sdl
 
 Makefile: configure Makefile.in
 	@echo "Makefile is older than configure or in-file. Run configure or touch Makefile."
@@ -45,8 +45,8 @@ configure: configure.ac
 	@echo "configure is older than in-file. Run autoconf or touch configure."
 	exit 1
 
-snes9x: $(OBJECTS)
-	$(CCC) $(INCLUDES) -o $@ $(OBJECTS) -lm @S9XLIBS@ `sdl-config --cflags --libs`
+snes9x-sdl: $(OBJECTS)
+	$(CCC) $(INCLUDES) -o $@ $(OBJECTS) -lm @S9XLIBS@
 
 ../jma/s9x-jma.o: ../jma/s9x-jma.cpp
 	$(CCC) $(INCLUDES) -c $(CCFLAGS) -fexceptions $*.cpp -o $@

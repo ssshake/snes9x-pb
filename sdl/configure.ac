@@ -85,21 +85,7 @@ else
 	AC_S9X_COMPILER_FLAG([-fomit-frame-pointer], [omit_frame_pointer])
 fi
 
-AC_ARG_ENABLE([mtune],
-	[AS_HELP_STRING([--enable-mtune],
-		[use the specified value for the -mtune/-mcpu flag (default: no)])],
-	[], [enable_mtune="no"])
-
-if test "x$enable_mtune" != "xno"; then
-	AC_S9X_COMPILER_FLAG([-mtune="$enable_mtune"], [mtune],
-	[
-		AC_MSG_WARN([-mtune failed, trying -mcpu...])
-		AC_S9X_COMPILER_FLAG([-mcpu="$enable_mtune"], [mcpu],
-			[AC_MSG_ERROR([Please specify a working value for --enable-mtune.])])
-	])
-fi
-
-# Added by domaemon
+# <domaemon>: --enable-neon
 
 AC_ARG_ENABLE([neon],
 	[AS_HELP_STRING([--enable-neon],
@@ -107,12 +93,21 @@ AC_ARG_ENABLE([neon],
 	[], [enable_neon="no"])
 
 if test "x$enable_neon" != "xno"; then
-	AC_S9X_COMPILER_FLAG(["-Wa,-march=armv7a -mcpu=cortex-a8 -mfpu=neon -fprefetch-loop-arrays"], [neon])
+	AC_S9X_COMPILER_FLAG(["-mfpu=neon"], [neon],
+	[
+		AC_MSG_ERROR(["NEON optimisation flag was not accepted."])
+	])
+
+	AC_S9X_COMPILER_FLAG(["-Wa,-march=armv7a"],		[march])
+	AC_S9X_COMPILER_FLAG(["-fprefetch-loop-arrays"],	[prefetch])
 fi
 
-# /domaemon
 
-AC_S9X_COMPILER_FLAG([-fno-exceptions],       [no_exceptions])
+AC_S9X_COMPILER_FLAG([-mcpu="$target_cpu"],   [mcpu])
+
+# </domaemon>
+
+AC_S9X_COMPILER_FLAG([-fno-exceptions],	      [no_exceptions])
 AC_S9X_COMPILER_FLAG([-fno-rtti],             [no_rtti])
 AC_S9X_COMPILER_FLAG([-pedantic],             [pedantic])
 AC_S9X_COMPILER_FLAG([-Wall],                 [Wall])
@@ -272,15 +267,26 @@ AC_CHECK_FUNC([mkstemp],
 	S9XDEFS="$S9XDEFS -DHAVE_MKSTEMP"
 ])
 
-# Check X11
+# <domaemon>: Check SDL, messy.
 
-AC_PATH_XTRA
-if test "x$no_x" = "xyes"; then
-	AC_MSG_ERROR([X11 is required.])
+AC_CACHE_VAL([snes9x_cv_sdl],
+[
+	AC_CHECK_HEADER([SDL/SDL.h],
+		[AC_CHECK_LIB([SDL], [SDL_Init], [snes9x_cv_sdl="yes"], [snes9x_cv_sdl="no"])],
+		[snes9x_cv_sdl="no"])
+])
+
+if test "x$snes9x_cv_sdl" = "xyes"; then
+  	S9XFLGS="$S9XFLGS `sdl-config --cflags`"
+	S9XLIBS="$S9XLIBS `sdl-config --libs`"
 else
-	S9XFLGS="$S9XFLGS $X_CFLAGS"
-	S9XLIBS="$S9XLIBS $X_PRE_LIBS -lX11 -lXext $X_LIBS $X_EXTRA_LIBS"
+	AC_MSG_ERROR([SDL is required.])
 fi
+
+###
+
+
+# </domaemon>
 
 # Check for headers
 
@@ -388,34 +394,6 @@ if test "x$snes9x_sar_int8" = "xyes" -a "x$snes9x_sar_int16" = "xyes" -a "x$snes
 	S9XDEFS="$S9XDEFS -DRIGHTSHIFT_IS_SAR"
 fi
 
-# Check if we have sound code for this platform.
-
-AC_ARG_ENABLE([sound],
-	[AS_HELP_STRING([--enable-sound],
-		[enable sound if available (default: yes)])],
-	[], [enable_sound="yes"])
-
-if test "x$enable_sound" = "xyes"; then
-	AC_MSG_CHECKING([whether sound is supported on this platform])
-	if test "x$snes9x_cv_linux_os" = "xyes"; then
-		AC_MSG_RESULT([yes])
-	else
-		AC_MSG_RESULT([no])
-		AC_MSG_WARN([Your OS is not Linux. Build without sound support.])
-		enable_sound="no"
-	fi
-fi
-
-if test "x$enable_sound" = "xyes"; then
-	AC_CHECK_HEADER([pthread.h],
-	[
-		S9XDEFS="$S9XDEFS -DUSE_THREADS"
-		S9XLIBS="$S9XLIBS -lpthread"
-	])
-else
-	S9XDEFS="$S9XDEFS -DNOSOUND"
-fi
-
 # Output.
 
 S9XFLGS="$CXXFLAGS $CPPFLAGS $LDFLAGS $S9XFLGS"
@@ -448,7 +426,6 @@ defines.............. $S9XDEFS
 libs................. $S9XLIBS
 
 features:
-sound support........ $enable_sound
 screenshot support... $enable_screenshot
 netplay support...... $enable_netplay
 gamepad support...... $enable_gamepad
