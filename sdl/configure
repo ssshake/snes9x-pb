@@ -3929,67 +3929,6 @@ $as_echo "no" >&6; }
 
 fi
 
-
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether g++ accepts -mtune=\"$target_cpu\"" >&5
-$as_echo_n "checking whether g++ accepts -mtune=\"$target_cpu\"... " >&6; }
-
-	if test "${snes9x_cv_option_mtune+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-
-		OLD_CXXFLAGS="$CXXFLAGS"
-		CXXFLAGS="$OLD_CXXFLAGS -mtune="$target_cpu""
-
-		if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5 ; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-			int	foo;
-
-			int	main (int argc, char **argv)
-			{
-				/* The following code triggs gcc:s generation of aline opcodes,
-				   which some versions of as does not support. */
-
-				if (argc > 0)
-					argc = 0;
-
-				return (argc);
-			}
-
-_ACEOF
-if ac_fn_cxx_try_run "$LINENO"; then :
-  snes9x_cv_option_mtune="yes"
-else
-  snes9x_cv_option_mtune="no"
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-
-fi
-
-
-	CXXFLAGS="$OLD_CXXFLAGS"
-
-	if test "x$snes9x_cv_option_mtune" = "xyes"; then
-		S9XFLGS="$S9XFLGS -mtune="$target_cpu""
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-	fi
-
-
 # </domaemon>
 
 
