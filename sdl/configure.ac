@@ -99,6 +99,19 @@ if test "x$enable_mtune" != "xno"; then
 	])
 fi
 
+# Added by domaemon
+
+AC_ARG_ENABLE([neon],
+	[AS_HELP_STRING([--enable-neon],
+		[use the optimisation flag to enable NEON instructions (default: no)])],
+	[], [enable_neon="no"])
+
+if test "x$enable_neon" != "xno"; then
+	AC_S9X_COMPILER_FLAG(["-Wa,-march=armv7a -mcpu=cortex-a8 -mfpu=neon -fprefetch-loop-arrays"], [neon])
+fi
+
+# /domaemon
+
 AC_S9X_COMPILER_FLAG([-fno-exceptions],       [no_exceptions])
 AC_S9X_COMPILER_FLAG([-fno-rtti],             [no_rtti])
 AC_S9X_COMPILER_FLAG([-pedantic],             [pedantic])
