@@ -3751,7 +3751,7 @@ if test "x$enable_neon" != "xno"; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether g++ accepts \"-mfpu=neon\"" >&5
 $as_echo_n "checking whether g++ accepts \"-mfpu=neon\"... " >&6; }
 
-	if test "${snes9x_cv_option_neon+set}" = set; then :
+	if test "${snes9x_cv_option_mfpu+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
@@ -3782,9 +3782,9 @@ else
 
 _ACEOF
 if ac_fn_cxx_try_run "$LINENO"; then :
-  snes9x_cv_option_neon="yes"
+  snes9x_cv_option_mfpu="yes"
 else
-  snes9x_cv_option_neon="no"
+  snes9x_cv_option_mfpu="no"
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
@@ -3796,7 +3796,7 @@ fi
 
 	CXXFLAGS="$OLD_CXXFLAGS"
 
-	if test "x$snes9x_cv_option_neon" = "xyes"; then
+	if test "x$snes9x_cv_option_mfpu" = "xyes"; then
 		S9XFLGS="$S9XFLGS "-mfpu=neon""
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -3931,15 +3931,15 @@ fi
 
 
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether g++ accepts -mcpu=\"$target_cpu\"" >&5
-$as_echo_n "checking whether g++ accepts -mcpu=\"$target_cpu\"... " >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether g++ accepts -mtune=\"$target_cpu\"" >&5
+$as_echo_n "checking whether g++ accepts -mtune=\"$target_cpu\"... " >&6; }
 
-	if test "${snes9x_cv_option_mcpu+set}" = set; then :
+	if test "${snes9x_cv_option_mtune+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
 		OLD_CXXFLAGS="$CXXFLAGS"
-		CXXFLAGS="$OLD_CXXFLAGS -mcpu="$target_cpu""
+		CXXFLAGS="$OLD_CXXFLAGS -mtune="$target_cpu""
 
 		if test "$cross_compiling" = yes; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -3965,9 +3965,9 @@ else
 
 _ACEOF
 if ac_fn_cxx_try_run "$LINENO"; then :
-  snes9x_cv_option_mcpu="yes"
+  snes9x_cv_option_mtune="yes"
 else
-  snes9x_cv_option_mcpu="no"
+  snes9x_cv_option_mtune="no"
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
@@ -3979,8 +3979,8 @@ fi
 
 	CXXFLAGS="$OLD_CXXFLAGS"
 
-	if test "x$snes9x_cv_option_mcpu" = "xyes"; then
-		S9XFLGS="$S9XFLGS -mcpu="$target_cpu""
+	if test "x$snes9x_cv_option_mtune" = "xyes"; then
+		S9XFLGS="$S9XFLGS -mtune="$target_cpu""
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 	else

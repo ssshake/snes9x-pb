@@ -93,7 +93,7 @@ AC_ARG_ENABLE([neon],
 	[], [enable_neon="no"])
 
 if test "x$enable_neon" != "xno"; then
-	AC_S9X_COMPILER_FLAG(["-mfpu=neon"], [neon],
+	AC_S9X_COMPILER_FLAG(["-mfpu=neon"], [mfpu],
 	[
 		AC_MSG_ERROR(["NEON optimisation flag was not accepted."])
 	])
@@ -103,7 +103,7 @@ if test "x$enable_neon" != "xno"; then
 fi
 
 
-AC_S9X_COMPILER_FLAG([-mcpu="$target_cpu"],   [mcpu])
+AC_S9X_COMPILER_FLAG([-mtune="$target_cpu"],   [mtune])
 
 # </domaemon>
 
