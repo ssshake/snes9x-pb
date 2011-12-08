@@ -102,9 +102,6 @@ if test "x$enable_neon" != "xno"; then
 	AC_S9X_COMPILER_FLAG(["-fprefetch-loop-arrays"],	[prefetch])
 fi
 
-
-AC_S9X_COMPILER_FLAG([-mtune="$target_cpu"],   [mtune])
-
 # </domaemon>
 
 AC_S9X_COMPILER_FLAG([-fno-exceptions],	      [no_exceptions])
