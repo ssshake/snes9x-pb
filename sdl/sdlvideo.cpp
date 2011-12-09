@@ -76,8 +76,7 @@ struct GUIData
 	int				video_mode;
 	int				mouse_x;
 	int				mouse_y;
-	bool8			mod1_pressed;
-	bool8			no_repeat;
+        bool8                   fullscreen;
 };
 
 static struct GUIData	GUI;
@@ -118,6 +117,8 @@ static void Repaint (bool8);
 
 void S9xExtraDisplayUsage (void)
 {
+	S9xMessage(S9X_INFO, S9X_USAGE, "-fullscreen                     fullscreen mode (without scaling)");
+	S9xMessage(S9X_INFO, S9X_USAGE, "");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v1                             Video mode: Blocky (default)");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v2                             Video mode: TV");
 	S9xMessage(S9X_INFO, S9X_USAGE, "-v3                             Video mode: Smooth");
@@ -131,6 +132,12 @@ void S9xExtraDisplayUsage (void)
 
 void S9xParseDisplayArg (char **argv, int &i, int argc)
 {
+	if (!strncasecmp(argv[i], "-fullscreen", 11))
+        {
+                GUI.fullscreen = TRUE;
+                printf ("Entering fullscreen mode (without scaling).\n");
+        }
+        else
 	if (!strncasecmp(argv[i], "-v", 2))
 	{
 		switch (argv[i][2])
@@ -232,7 +239,12 @@ void S9xInitDisplay (int argc, char **argv)
 	 * FIXME: The secreen size should be flexible
 	 * FIXME: Check if the SDL screen is really in RGB565 mode. screen->fmt	
 	 */	
-        screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
+        if (GUI.fullscreen == TRUE)
+        {
+                screen = SDL_SetVideoMode(0, 0, 16, SDL_FULLSCREEN);
+        } else {
+                screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
+        }
 
         if (screen == NULL) {
           printf("Unable to set video mode: %s\n", SDL_GetError());
@@ -289,8 +301,26 @@ static void SetupImage (void)
 		FatalError("Failed to allocate GUI.filter_buffer.");
 #endif
 
-        GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
-        GUI.blit_screen       = (uint8 *) screen->pixels;
+	if (GUI.fullscreen == TRUE)
+	{
+		int offset_height_pix;
+		int offset_width_pix;
+		int offset_byte;
+
+
+		offset_height_pix = (screen->h - (SNES_HEIGHT * 2)) / 2;
+		offset_width_pix = (screen->w - (SNES_WIDTH * 2)) / 2;
+		
+		offset_byte = (screen->w * offset_height_pix + offset_width_pix) * 2;
+
+		GUI.blit_screen       = (uint8 *) screen->pixels + offset_byte;
+		GUI.blit_screen_pitch = screen->w * 2;
+	}
+	else 
+	{
+		GUI.blit_screen       = (uint8 *) screen->pixels;
+		GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
+	}
 
 	S9xGraphicsInit();
 }
@@ -304,7 +334,6 @@ void S9xPutImage (int width, int height)
 	if (GUI.video_mode == VIDEOMODE_BLOCKY || GUI.video_mode == VIDEOMODE_TV || GUI.video_mode == VIDEOMODE_SMOOTH)
 		if ((width <= SNES_WIDTH) && ((prevWidth != width) || (prevHeight != height)))
 			S9xBlitClearDelta();
-
 
 	if (width <= SNES_WIDTH)
 	{
@@ -381,20 +410,30 @@ static void Repaint (bool8 isFrameBoundry)
 void S9xProcessEvents (bool8 block)
 {
 	SDL_Event event;
+	bool8 quit_state = FALSE;
 
 	while ((block) || (SDL_PollEvent (&event) != 0)) {
-	  switch (event.type) {
-	  case SDL_KEYDOWN:
-	  case SDL_KEYUP:
-	    //	    printf ("%d \n", event.key.keysym.sym);
-	    S9xReportButton(event.key.keysym.sym, event.type == SDL_KEYDOWN);
-	    //	    printf( "%s\n", SDL_GetKeyName(event.key.keysym.sym));
-	    break;
-	  case SDL_QUIT:
-	    printf ("Quit Event. Bye.\n");
+		switch (event.type) {
+		case SDL_KEYDOWN:
+		case SDL_KEYUP:
+			// domaemon: not sure it's a good idea, but I will reserve the SDLK_q for quit.
+			if (event.key.keysym.sym == SDLK_q)
+			{
+				quit_state = TRUE;
+			} else {
+				S9xReportButton(event.key.keysym.sym, event.type == SDL_KEYDOWN);
+			}
+			break;
+		case SDL_QUIT:
+			// domaemon: we come here when the window is getting closed.
+			quit_state = TRUE;
+		}
+	}
 
-	    S9xExit();
-	  }
+	if (quit_state == TRUE)
+	{
+		printf ("Quit Event. Bye.\n");
+		S9xExit();
 	}
 }
 
