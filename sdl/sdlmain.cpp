@@ -3,7 +3,7 @@
 
   See CREDITS file to find the copyright owners of this file.
 
-  SDL Audio/Video glue code (mostly borrowed from snes9x & drnoksnes)
+  SDL Input/Audio/Video code (many lines of code come from snes9x & drnoksnes)
   (c) Copyright 2011         Makoto Sugano (makoto.sugano@gmail.com)
 
   Snes9x homepage: http://www.snes9x.com/
