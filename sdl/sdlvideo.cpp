@@ -559,7 +559,7 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 
 			d |= key & 0xff;
 #endif
-
+			// domaemon: FIXME: needs to differenciate from the JOYPAD button
 			return (S9xMapButton(key, *cmd, false));
 		}
 

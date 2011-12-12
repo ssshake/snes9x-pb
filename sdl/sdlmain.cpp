@@ -123,6 +123,9 @@ static const char	dirNames[13][32] =
 static uint8		js_mod[8]     = { 0, 0, 0, 0, 0, 0, 0, 0 };
 static int			js_fd[8]      = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static const char	*js_device[8] = { "/dev/js0", "/dev/js1", "/dev/js2", "/dev/js3", "/dev/js4", "/dev/js5", "/dev/js6", "/dev/js7" };
+
+SDL_Joystick * joystick[4] = {NULL, NULL, NULL, NULL};
+
 #endif
 
 #ifdef NETPLAY_SUPPORT
@@ -430,35 +433,16 @@ void S9xParsePortConfig (ConfigFile &conf, int pass)
 	keymaps.clear();
 	if (!conf.GetBool("Unix::ClearAllControls", false))
 	{
-	#if 0
-		// Using an axis to control Pseudo-pointer #1
-		keymaps.push_back(strpair_t("J00:Axis0",      "AxisToPointer 1h Var"));
-		keymaps.push_back(strpair_t("J00:Axis1",      "AxisToPointer 1v Var"));
-		keymaps.push_back(strpair_t("PseudoPointer1", "Pointer C=2 White/Black Superscope"));
-	#elif 0
-		// Using an Axis for Pseudo-buttons
-		keymaps.push_back(strpair_t("J00:Axis0",      "AxisToButtons 1/0 T=50%"));
-		keymaps.push_back(strpair_t("J00:Axis1",      "AxisToButtons 3/2 T=50%"));
-		keymaps.push_back(strpair_t("PseudoButton0",  "Joypad1 Right"));
-		keymaps.push_back(strpair_t("PseudoButton1",  "Joypad1 Left"));
-		keymaps.push_back(strpair_t("PseudoButton2",  "Joypad1 Down"));
-		keymaps.push_back(strpair_t("PseudoButton3",  "Joypad1 Up"));
-	#else
 		// Using 'Joypad# Axis'
 		keymaps.push_back(strpair_t("J00:Axis0",      "Joypad1 Axis Left/Right T=50%"));
 		keymaps.push_back(strpair_t("J00:Axis1",      "Joypad1 Axis Up/Down T=50%"));
-	#endif
+
 		keymaps.push_back(strpair_t("J00:B0",         "Joypad1 X"));
 		keymaps.push_back(strpair_t("J00:B1",         "Joypad1 A"));
 		keymaps.push_back(strpair_t("J00:B2",         "Joypad1 B"));
 		keymaps.push_back(strpair_t("J00:B3",         "Joypad1 Y"));
-	#if 1
+
 		keymaps.push_back(strpair_t("J00:B6",         "Joypad1 L"));
-	#else
-		// Show off joypad-meta
-		keymaps.push_back(strpair_t("J00:X+B6",       "JS1 Meta1"));
-		keymaps.push_back(strpair_t("J00:M1+B1",      "Joypad1 Turbo A"));
-	#endif
 		keymaps.push_back(strpair_t("J00:B7",         "Joypad1 R"));
 		keymaps.push_back(strpair_t("J00:B8",         "Joypad1 Select"));
 		keymaps.push_back(strpair_t("J00:B11",        "Joypad1 Start"));
@@ -879,118 +863,10 @@ bool S9xPollPointer (uint32 id, int16 *x, int16 *y)
 	return (S9xDisplayPollPointer(id, x, y));
 }
 
-s9xcommand_t S9xGetPortCommandT (const char *n)
-{
-	s9xcommand_t	cmd;
-
-	cmd.type         = S9xBadMapping;
-	cmd.multi_press  = 0;
-	cmd.button_norpt = 0;
-	cmd.port[0]      = 0;
-	cmd.port[1]      = 0;
-	cmd.port[2]      = 0;
-	cmd.port[3]      = 0;
-
-	if (!strncmp(n, "JS", 2) && n[2] >= '1' && n[2] <= '8')
-	{
-		if (!strncmp(n + 3, " Meta", 5) && n[8] >= '1' && n[8] <= '8' && n[9] == '\0')
-		{
-			cmd.type    = S9xButtonPort;
-			cmd.port[1] = 0;
-			cmd.port[2] = n[2] - '1';
-			cmd.port[3] = 1 << (n[8] - '1');
-
-			return (cmd);
-		}
-		else
-		if (!strncmp(n + 3, " ToggleMeta", 11) && n[14] >= '1' && n[14] <= '8' && n[15] == '\0')
-		{
-			cmd.type    = S9xButtonPort;
-			cmd.port[1] = 1;
-			cmd.port[2] = n[2] - '1';
-			cmd.port[3] = 1 << (n[13] - '1');
-
-			return (cmd);
-		}
-	}
-
-	return (S9xGetDisplayCommandT(n));
-}
-
-char * S9xGetPortCommandName (s9xcommand_t cmd)
-{
-	std::string	x;
-
-	switch (cmd.type)
-	{
-		case S9xButtonPort:
-			if (cmd.port[0] != 0)
-				break;
-
-			switch (cmd.port[1])
-			{
-				case 0:
-					x = "JS";
-					x += (int) cmd.port[2];
-					x += " Meta";
-					x += (int) cmd.port[3];
-					return (strdup(x.c_str()));
-
-				case 1:
-					x = "JS";
-					x += (int) cmd.port[2];
-					x += " ToggleMeta";
-					x += (int) cmd.port[3];
-					return (strdup(x.c_str()));
-			}
-
-			break;
-
-		case S9xAxisPort:
-			break;
-
-		case S9xPointerPort:
-			break;
-	}
-
-	return (S9xGetDisplayCommandName(cmd));
-}
-
+// domaemon: needed by SNES9X
 void S9xHandlePortCommand (s9xcommand_t cmd, int16 data1, int16 data2)
 {
-#ifdef JOYSTICK_SUPPORT
-	switch (cmd.type)
-	{
-		case S9xButtonPort:
-			if (cmd.port[0] != 0)
-				break;
-
-			switch (cmd.port[1])
-			{
-				case 0:
-					if (data1)
-						js_mod[cmd.port[2]] |=  cmd.port[3];
-					else
-						js_mod[cmd.port[2]] &= ~cmd.port[3];
-					break;
-				
-				case 1:
-					if (data1)
-						js_mod[cmd.port[2]] ^=  cmd.port[3];
-					break;
-			}
-
-			break;
-
-		case S9xAxisPort:
-			break;
-
-		case S9xPointerPort:
-			break;
-	}
-
-	S9xHandleDisplayCommand(cmd, data1, data2);
-#endif
+	return;
 }
 
 void S9xSetupDefaultKeymap (void)
@@ -1001,7 +877,11 @@ void S9xSetupDefaultKeymap (void)
 
 	for (ConfigFile::secvec_t::iterator i = keymaps.begin(); i != keymaps.end(); i++)
 	{
+#if 0 // domaemon
 		cmd = S9xGetPortCommandT(i->second.c_str());
+#else
+		cmd = S9xGetDisplayCommandT(i->second.c_str());
+#endif
 
 		if (cmd.type == S9xBadMapping)
 		{
@@ -1039,6 +919,8 @@ void S9xInitInputDevices (void)
 static void InitJoysticks (void)
 {
 #ifdef JSIOCGVERSION
+// #if 0 : domaemon
+
 	int				version;
 	unsigned char	axes, buttons;
 
@@ -1093,6 +975,37 @@ static void InitJoysticks (void)
 			}
 		}
 	}
+#else // 0
+	int i;
+	
+	// domaemon: 1) initializing the joystic subsystem
+	SDL_InitSubSystem (SDL_INIT_JOYSTICK);
+
+	/*
+	 * domaemon: 2) check how may joysticks are connected
+	 * domaemon: 3) relate paddev1 to SDL_Joystick[0], paddev2 to SDL_Joystick[1]...
+	 * domaemon: 4) print out the joystick name and capabilities
+	 */
+
+	i = SDL_NumJoysticks();
+
+	if (i == 0)
+	{
+		fprintf(stderr, "joystick: No joystick found.\n");
+	}
+	else
+	{
+		for (i = 0; i < SDL_NumJoysticks(); i++)
+		{
+			joystick[i] = SDL_JoystickOpen (i);
+			printf ("  %s\n", SDL_JoystickName(i));
+			printf ("  %d-axis %d-buttons %d-balls %d-hats \n",
+				SDL_JoystickNumAxes(joystick[i]),
+				SDL_JoystickNumButtons(joystick[i]),
+				SDL_JoystickNumBalls(joystick[i]),
+				SDL_JoystickNumHats(joystick[i]));
+		}
+	}
 #endif
 }
 
@@ -1113,8 +1026,12 @@ static void ReadJoysticks (void)
 					break;
 
 				case JS_EVENT_BUTTON:
+#if 0 // domaemon
 					S9xReportButton(0x80004000 | (i << 24) | js_ev.number, js_ev.value);
 					S9xReportButton(0x80000000 | (i << 24) | (js_mod[i] << 16) | js_ev.number, js_ev.value);
+#else
+					S9xReportButton(0x80000000 | (i << 24) | js_ev.number, js_ev.value);
+#endif
 					break;
 			}
 		}

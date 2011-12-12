@@ -38,6 +38,21 @@ main()
 			printf ("%d \n", event.jbutton.button);
 			break;
 		case SDL_JOYHATMOTION:
+			switch (event.jhat.value) {
+			case SDL_HAT_UP:
+				printf ("SDL_HAT_UP\n");
+				break;
+			case SDL_HAT_DOWN:
+				printf ("SDL_HAT_DOWN\n");
+				break;
+			case SDL_HAT_LEFT:
+				printf ("SDL_HAT_LEFT\n");
+				break;
+			case SDL_HAT_RIGHT:
+				printf ("SDL_HAT_RIGHT\n");
+				break;
+			}
+
 			printf ("JOYHATMOTION\n");
 			break;
 		case SDL_QUIT:
