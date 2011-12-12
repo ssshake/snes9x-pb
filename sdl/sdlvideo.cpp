@@ -247,9 +247,10 @@ void S9xInitDisplay (int argc, char **argv)
                 screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
         }
 
-        if (screen == NULL) {
-          printf("Unable to set video mode: %s\n", SDL_GetError());
-          exit(1);
+        if (screen == NULL)
+	{
+		printf("Unable to set video mode: %s\n", SDL_GetError());
+		exit(1);
         }
 
 	/*
@@ -413,11 +414,12 @@ void S9xProcessEvents (bool8 block)
 	SDL_Event event;
 	bool8 quit_state = FALSE;
 
-	while ((block) || (SDL_PollEvent (&event) != 0)) {
+	while ((block) || (SDL_PollEvent (&event) != 0))
+	{
 		switch (event.type) {
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
-			// domaemon: not sure it's a good idea, but I will reserve the SDLK_q for quit.
+			// domaemon: not sure it's the best idea, but reserving the SDLK_q for quit.
 			if (event.key.keysym.sym == SDLK_q)
 			{
 				quit_state = TRUE;
@@ -430,7 +432,7 @@ void S9xProcessEvents (bool8 block)
 			quit_state = TRUE;
 		}
 	}
-
+	
 	if (quit_state == TRUE)
 	{
 		printf ("Quit Event. Bye.\n");
