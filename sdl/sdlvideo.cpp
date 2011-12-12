@@ -214,20 +214,21 @@ static void FatalError (const char *str)
 
 void S9xInitDisplay (int argc, char **argv)
 {
-  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-    printf("Unable to initialize SDL: %s\n", SDL_GetError());
-  }
+	if (SDL_Init(SDL_INIT_VIDEO) != 0)
+	{
+		printf("Unable to initialize SDL: %s\n", SDL_GetError());
+	}
   
-  atexit(SDL_Quit);
-
-  /*
-   * domaemon
-   *
-   * we just go along with RGB565 for now, nothing else..
-   */
-
-  S9xSetRenderPixelFormat(RGB565);
-
+	atexit(SDL_Quit);
+	
+	/*
+	 * domaemon
+	 *
+	 * we just go along with RGB565 for now, nothing else..
+	 */
+	
+	S9xSetRenderPixelFormat(RGB565);
+	
 	S9xBlitFilterInit();
 	S9xBlit2xSaIFilterInit();
 	S9xBlitHQ2xFilterInit();
