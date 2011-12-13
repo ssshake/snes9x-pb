@@ -445,33 +445,7 @@ void S9xProcessEvents (bool8 block)
 				      event.jaxis.axis, // joystick axis
 				      event.jaxis.value); // axis value
 			break;
-#if 0 // domaemon
-		case SDL_JOYHATMOTION:
-			if (event.jhat.value == SDL_HAT_UP)
-			{
-				printf ("SDL_HAT_UP\n");
-			}
-			else if (event.jhat.value == SDL_HAT_DOWN) 
-			{
-				printf ("SDL_HAT_DOWN\n");
-			}
-			else if (event.jhat.value == SDL_HAT_LEFT)
-			{
-				printf ("SDL_HAT_LEFT\n");
-			}
-			else if (event.jhat.value == SDL_HAT_RIGHT) 
-			{
-				printf ("SDL_HAT_RIGHT\n");
-			}
-			else
-			{
-				printf ("SDL_HAT_UNKNOWN\n");
-				break;
-			}
-			
-			break;
-#endif
-			
+
 /***** Joystick ends *****/
 
 		case SDL_QUIT:
@@ -599,7 +573,9 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 
 			if (n[i] == '\0' || i == 4) // domaemon: no mod keys.
 				i = 4;
-                        else // domaemon: mod keys
+
+#if 0 // domaemon: mod keys not working properly.
+                        else // domaemon: with mod keys
                         {
                                 for (i = 4; n[i] != '+'; i++)
                                 {
@@ -607,13 +583,14 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
                                         {
                                                 case 'S': d |= KMOD_SHIFT  << 16; break;
                                                 case 'C': d |= KMOD_CTRL   << 16; break;
-                                                case 'A': d |= KMOD_LALT    << 16; break;
+                                                case 'A': d |= KMOD_ALT    << 16; break;
                                                 case 'M': d |= KMOD_META   << 16; break;
                                                 default:  goto unrecog;
                                         }
                                 }
                                 i++;
                         }
+#endif
 
 			string keyname (n + i); // domaemon: SDL_keysym in string format.
 			key = name_sdlkeysym[keyname];
