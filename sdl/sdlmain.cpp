@@ -49,17 +49,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#ifdef HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
-#endif
 
 #ifdef HAVE_SDL
 #include <SDL/SDL.h>
 #include "sdl_snes9x.h"
-#endif
-
-#ifdef JOYSTICK_SUPPORT
-#include <linux/joystick.h>
 #endif
 
 #include "snes9x.h"
@@ -119,14 +112,8 @@ static const char	dirNames[13][32] =
 	""
 };
 
-#ifdef JOYSTICK_SUPPORT
-static uint8		js_mod[8]     = { 0, 0, 0, 0, 0, 0, 0, 0 };
-static int			js_fd[8]      = { -1, -1, -1, -1, -1, -1, -1, -1 };
-static const char	*js_device[8] = { "/dev/js0", "/dev/js1", "/dev/js2", "/dev/js3", "/dev/js4", "/dev/js5", "/dev/js6", "/dev/js7" };
-
 SDL_Joystick * joystick[4] = {NULL, NULL, NULL, NULL};
-
-#endif
+int num_joysticks = 0;
 
 #ifdef NETPLAY_SUPPORT
 static uint32	joypads[8];
@@ -230,15 +217,6 @@ void S9xExtraUsage (void)
 	S9xMessage(S9X_INFO, S9X_USAGE, "-cartb <filename>               ROM in slot B (use with -multi)");
 	S9xMessage(S9X_INFO, S9X_USAGE, "");
 
-#ifdef JOYSTICK_SUPPORT
-	S9xMessage(S9X_INFO, S9X_USAGE, "-nogamepad                      Disable gamepad reading");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-paddev1 <string>               Specify gamepad device 1");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-paddev1 <string>               Specify gamepad device 2");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-paddev1 <string>               Specify gamepad device 3");
-	S9xMessage(S9X_INFO, S9X_USAGE, "-paddev1 <string>               Specify gamepad device 4");
-	S9xMessage(S9X_INFO, S9X_USAGE, "");
-#endif
-
 	S9xMessage(S9X_INFO, S9X_USAGE, "-buffersize                     Sound generating buffer size in millisecond");
 	S9xMessage(S9X_INFO, S9X_USAGE, "");
 
@@ -274,22 +252,6 @@ void S9xParseArg (char **argv, int &i, int argc)
 			S9xUsage();
 	}
 	else
-#ifdef JOYSTICK_SUPPORT
-	if (!strcasecmp(argv[i], "-nogamepad"))
-		unixSettings.JoystickEnabled = FALSE;
-	else
-	if (!strncasecmp(argv[i], "-paddev", 7) &&
-		argv[i][7] >= '1' && argv[i][7] <= '8' && argv[i][8] == '\0')
-	{
-		int	j = argv[i][7] - '1';
-
-		if (i + 1 < argc)
-			js_device[j] = argv[++i];
-		else
-			S9xUsage();
-	}
-	else
-#endif
 	if (!strcasecmp(argv[i], "-buffersize"))
 	{
 		if (i + 1 < argc)
@@ -415,18 +377,6 @@ void S9xParsePortConfig (ConfigFile &conf, int pass)
 	snapshot_filename              = conf.GetStringDup("Unix::SnapshotFilename",    NULL);
 	play_smv_filename              = conf.GetStringDup("Unix::PlayMovieFilename",   NULL);
 	record_smv_filename            = conf.GetStringDup("Unix::RecordMovieFilename", NULL);
-
-#ifdef JOYSTICK_SUPPORT
-	unixSettings.JoystickEnabled   = conf.GetBool     ("Unix::EnableGamePad",       true);
-	js_device[0]                   = conf.GetStringDup("Unix::PadDevice1",          NULL);
-	js_device[1]                   = conf.GetStringDup("Unix::PadDevice2",          NULL);
-	js_device[2]                   = conf.GetStringDup("Unix::PadDevice3",          NULL);
-	js_device[3]                   = conf.GetStringDup("Unix::PadDevice4",          NULL);
-	js_device[4]                   = conf.GetStringDup("Unix::PadDevice5",          NULL);
-	js_device[5]                   = conf.GetStringDup("Unix::PadDevice6",          NULL);
-	js_device[6]                   = conf.GetStringDup("Unix::PadDevice7",          NULL);
-	js_device[7]                   = conf.GetStringDup("Unix::PadDevice8",          NULL);
-#endif
 
 	unixSettings.SoundBufferSize   = conf.GetUInt     ("Unix::SoundBufferSize",     100);
 
@@ -793,11 +743,12 @@ bool8 S9xMapInput (const char *n, s9xcommand_t *cmd)
 {
 	int		i, j, d;
 	char	*c;
-	char	buf[4] = "M1+";
 
+	// domaemon: linking PseudoPointer# and command
 	if (!strncmp(n, "PseudoPointer", 13) && n[13] >= '1' && n[13] <= '8' && n[14] == '\0')
 		return (S9xMapPointer(PseudoPointerBase + (n[13] - '1'), *cmd, false));
 
+	// domaemon: linking PseudoButton# and command
 	if (!strncmp(n, "PseudoButton", 12) && isdigit(n[12]) && (j = strtol(n + 12, &c, 10)) < 256 && (c == NULL || *c == '\0'))
 		return (S9xMapButton(PseudoButtonBase + j, *cmd, false));
 
@@ -807,35 +758,21 @@ bool8 S9xMapInput (const char *n, s9xcommand_t *cmd)
 	d = ((n[1] - '0') * 10 + (n[2] - '0')) << 24;
 	d |= 0x80000000;
 	i = 4;
-	if (!strncmp(n + i, "X+", 2))
-	{
-		d |= 0x4000;
-		i += 2;
-	}
-	else
-	{
-		for (buf[1] = '1'; buf[1] <= '8'; buf[1]++)
-		{
-			if (!strncmp(n + i, buf, 3))
-			{
-				d |= 1 << (buf[1] - '1' + 16);
-				i += 3;
-			}
-		}
-	}
 
 	if (!strncmp(n + i, "Axis", 4))
 	{
-		d |= 0x8000;
+		d |= 0x8000; // Axis mode
 		i += 4;
 	}
 	else
-	if (n[i] == 'B')
-		i++;
-	else
-		goto unrecog;
-
-	d |= j = strtol(n + i, &c, 10);
+	{	
+		if (n[i] == 'B')
+			i++;
+		else
+			goto unrecog;
+	}
+	
+	d |= j = strtol(n + i, &c, 10); // Axis or Button id
 	if ((c != NULL && *c != '\0') || j > 0x3fff)
 		goto unrecog;
 
@@ -877,11 +814,7 @@ void S9xSetupDefaultKeymap (void)
 
 	for (ConfigFile::secvec_t::iterator i = keymaps.begin(); i != keymaps.end(); i++)
 	{
-#if 0 // domaemon
-		cmd = S9xGetPortCommandT(i->second.c_str());
-#else
 		cmd = S9xGetDisplayCommandT(i->second.c_str());
-#endif
 
 		if (cmd.type == S9xBadMapping)
 		{
@@ -914,70 +847,8 @@ void S9xInitInputDevices (void)
 #endif
 }
 
-#ifdef JOYSTICK_SUPPORT
-
 static void InitJoysticks (void)
 {
-#ifdef JSIOCGVERSION
-// #if 0 : domaemon
-
-	int				version;
-	unsigned char	axes, buttons;
-
-	if ((js_fd[0] = open(js_device[0], O_RDONLY | O_NONBLOCK)) == -1)
-	{
-		fprintf(stderr, "joystick: No joystick found.\n");
-		return;
-	}
-
-	if (ioctl(js_fd[0], JSIOCGVERSION, &version) == -1)
-	{
-		fprintf(stderr, "joystick: You need at least driver version 1.0 for joystick support.\n");
-		close(js_fd[0]);
-		return;
-	}
-
-	for (int i = 1; i < 8; i++)
-		js_fd[i] = open(js_device[i], O_RDONLY | O_NONBLOCK);
-
-#ifdef JSIOCGNAME
-	char	name[130];
-
-	bzero(name, 128);
-
-	if (ioctl(js_fd[0], JSIOCGNAME(128), name) > 0)
-	{
-		printf("Using %s (%s) as joystick1\n", name, js_device[0]);
-
-		for (int i = 1; i < 8; i++)
-		{
-			if (js_fd[i] > 0)
-			{
-				ioctl(js_fd[i], JSIOCGNAME(128), name);
-				printf ("  and %s (%s) as joystick%d\n", name, js_device[i], i + 1);
-			}
-		}
-	}
-	else
-#endif
-	{
-		ioctl(js_fd[0], JSIOCGAXES, &axes);
-		ioctl(js_fd[0], JSIOCGBUTTONS, &buttons);
-		printf("Using %d-axis %d-button joystick (%s) as joystick1\n", axes, buttons, js_device[0]);
-
-		for (int i = 1; i < 8; i++)
-		{
-			if (js_fd[i] > 0)
-			{
-				ioctl(js_fd[i], JSIOCGAXES, &axes);
-				ioctl(js_fd[i], JSIOCGBUTTONS, &buttons);
-				printf("  and %d-axis %d-button joystick (%s) as joystick%d\n", axes, buttons, js_device[i], i + 1);
-			}
-		}
-	}
-#else // 0
-	int i;
-	
 	// domaemon: 1) initializing the joystic subsystem
 	SDL_InitSubSystem (SDL_INIT_JOYSTICK);
 
@@ -987,15 +858,17 @@ static void InitJoysticks (void)
 	 * domaemon: 4) print out the joystick name and capabilities
 	 */
 
-	i = SDL_NumJoysticks();
+	num_joysticks = SDL_NumJoysticks();
 
-	if (i == 0)
+	if (num_joysticks == 0)
 	{
 		fprintf(stderr, "joystick: No joystick found.\n");
 	}
 	else
 	{
-		for (i = 0; i < SDL_NumJoysticks(); i++)
+		SDL_JoystickEventState (SDL_ENABLE);
+
+		for (int i = 0; i < num_joysticks; i++)
 		{
 			joystick[i] = SDL_JoystickOpen (i);
 			printf ("  %s\n", SDL_JoystickName(i));
@@ -1006,40 +879,7 @@ static void InitJoysticks (void)
 				SDL_JoystickNumHats(joystick[i]));
 		}
 	}
-#endif
 }
-
-static void ReadJoysticks (void)
-{
-#ifdef JSIOCGVERSION
-	struct js_event	js_ev;
-
-	for (int i = 0; i < 8 && js_fd[i] >= 0; i++)
-	{
-		while (read(js_fd[i], &js_ev, sizeof(struct js_event)) == sizeof(struct js_event))
-		{
-			switch (js_ev.type & ~JS_EVENT_INIT)
-			{
-				case JS_EVENT_AXIS:
-					S9xReportAxis(0x8000c000 | (i << 24) | js_ev.number, js_ev.value);
-					S9xReportAxis(0x80008000 | (i << 24) | (js_mod[i] << 16) | js_ev.number, js_ev.value);
-					break;
-
-				case JS_EVENT_BUTTON:
-#if 0 // domaemon
-					S9xReportButton(0x80004000 | (i << 24) | js_ev.number, js_ev.value);
-					S9xReportButton(0x80000000 | (i << 24) | (js_mod[i] << 16) | js_ev.number, js_ev.value);
-#else
-					S9xReportButton(0x80000000 | (i << 24) | js_ev.number, js_ev.value);
-#endif
-					break;
-			}
-		}
-	}
-#endif
-}
-
-#endif
 
 void S9xExit (void)
 {
@@ -1293,18 +1133,10 @@ int main (int argc, char **argv)
 		CPU.Flags |= flags;
 	}
 
-#ifndef HAVE_SDL
-	S9xGraphicsMode();
-#endif
-
 	sprintf(String, "\"%s\" %s: %s", Memory.ROMName, TITLE, VERSION);
 
 	// domaemon: setting the title on the window bar
 	S9xSetTitle(String);
-
-#ifdef JOYSTICK_SUPPORT
-	uint32	JoypadSkip = 0;
-#endif
 
 	S9xSetSoundMute(FALSE);
 
@@ -1378,11 +1210,6 @@ int main (int argc, char **argv)
 			S9xProcessEvents(FALSE);
 			usleep(100000);
 		}
-
-	#ifdef JOYSTICK_SUPPORT
-		if (unixSettings.JoystickEnabled && (JoypadSkip++ & 1) == 0)
-			ReadJoysticks();
-	#endif
 
 		S9xProcessEvents(FALSE);
 

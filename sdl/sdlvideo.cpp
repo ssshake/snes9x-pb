@@ -34,14 +34,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
-#include <sys/stat.h>
-#include <sys/ioctl.h>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -423,13 +420,64 @@ void S9xProcessEvents (bool8 block)
 			if (event.key.keysym.sym == SDLK_q)
 			{
 				quit_state = TRUE;
-			} else {
-				S9xReportButton(event.key.keysym.sym, event.type == SDL_KEYDOWN);
+			} 
+			else
+			{
+				S9xReportButton(event.key.keysym.mod << 16 | // keyboard mod
+						event.key.keysym.sym, // keyboard ksym
+						event.type == SDL_KEYDOWN); // press or release
 			}
 			break;
+
+/***** Joystick starts *****/
+
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYBUTTONUP:
+			S9xReportButton(0x80000000 | // joystick button
+					(event.jbutton.which << 24) | // joystick index
+					event.jbutton.button, // joystick button code
+					event.type == SDL_JOYBUTTONDOWN); // press or release
+			break;
+
+		case SDL_JOYAXISMOTION:
+			S9xReportAxis(0x80008000 | // joystick axis
+				      (event.jaxis.which << 24) | // joystick index
+				      event.jaxis.axis, // joystick axis
+				      event.jaxis.value); // axis value
+			break;
+#if 0 // domaemon
+		case SDL_JOYHATMOTION:
+			if (event.jhat.value == SDL_HAT_UP)
+			{
+				printf ("SDL_HAT_UP\n");
+			}
+			else if (event.jhat.value == SDL_HAT_DOWN) 
+			{
+				printf ("SDL_HAT_DOWN\n");
+			}
+			else if (event.jhat.value == SDL_HAT_LEFT)
+			{
+				printf ("SDL_HAT_LEFT\n");
+			}
+			else if (event.jhat.value == SDL_HAT_RIGHT) 
+			{
+				printf ("SDL_HAT_RIGHT\n");
+			}
+			else
+			{
+				printf ("SDL_HAT_UNKNOWN\n");
+				break;
+			}
+			
+			break;
+#endif
+			
+/***** Joystick ends *****/
+
 		case SDL_QUIT:
 			// domaemon: we come here when the window is getting closed.
 			quit_state = TRUE;
+			break;
 		}
 	}
 	
@@ -549,18 +597,30 @@ bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
 
 			for (i = 4; n[i] != '\0' && n[i] != '+'; i++) ;
 
-			if (n[i] == '\0' || i == 4)
+			if (n[i] == '\0' || i == 4) // domaemon: no mod keys.
 				i = 4;
-#if 1
-			string keyname (n + i);
-			//			cout << keyname << endl;
-			//			printf ("%d\n", name_sdlkeysym[keyname]);
+                        else // domaemon: mod keys
+                        {
+                                for (i = 4; n[i] != '+'; i++)
+                                {
+                                        switch (n[i])
+                                        {
+                                                case 'S': d |= KMOD_SHIFT  << 16; break;
+                                                case 'C': d |= KMOD_CTRL   << 16; break;
+                                                case 'A': d |= KMOD_LALT    << 16; break;
+                                                case 'M': d |= KMOD_META   << 16; break;
+                                                default:  goto unrecog;
+                                        }
+                                }
+                                i++;
+                        }
+
+			string keyname (n + i); // domaemon: SDL_keysym in string format.
 			key = name_sdlkeysym[keyname];
 
-			d |= key & 0xff;
-#endif
-			// domaemon: FIXME: needs to differenciate from the JOYPAD button
-			return (S9xMapButton(key, *cmd, false));
+			d |= key;
+			return (S9xMapButton(d, *cmd, false));
+
 		}
 
 		case 'M':
