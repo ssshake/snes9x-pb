@@ -31,14 +31,10 @@
   Nintendo Co., Limited and its subsidiary companies.
  ***********************************************************************************/
 
-#define HAVE_SDL 1
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <fcntl.h>
 #include <dirent.h>
-#include <signal.h>
 #include <errno.h>
 #include <string.h>
 
@@ -50,10 +46,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#ifdef HAVE_SDL
 #include <SDL/SDL.h>
 #include "sdl_snes9x.h"
-#endif
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -79,19 +73,13 @@
 #endif
 #endif
 
-typedef std::pair<std::string, std::string>	strpair_t;
-
-ConfigFile::secvec_t	keymaps;
-
-#define FIXED_POINT				0x10000
-#define FIXED_POINT_SHIFT		16
-#define FIXED_POINT_REMAINDER	0xffff
-
 static const char	*s9x_base_dir        = NULL,
 					*rom_filename        = NULL,
 					*snapshot_filename   = NULL,
 					*play_smv_filename   = NULL,
 					*record_smv_filename = NULL;
+
+extern uint32           sound_buffer_size; // used in sdlaudio
 
 static char		default_dir[PATH_MAX + 1];
 
@@ -112,31 +100,18 @@ static const char	dirNames[13][32] =
 	""
 };
 
-SDL_Joystick * joystick[4] = {NULL, NULL, NULL, NULL};
-int num_joysticks = 0;
-
 #ifdef NETPLAY_SUPPORT
 static uint32	joypads[8];
 static uint32	old_joypads[8];
 #endif
 
-bool8 S9xMapDisplayInput (const char *, s9xcommand_t *);
-s9xcommand_t S9xGetDisplayCommandT (const char *);
-char * S9xGetDisplayCommandName (s9xcommand_t);
-void S9xHandleDisplayCommand (s9xcommand_t, int16, int16);
-bool S9xDisplayPollButton (uint32, bool *);
-bool S9xDisplayPollAxis (uint32, int16 *);
-bool S9xDisplayPollPointer (uint32, int16 *, int16 *);
+bool8 S9xMapDisplayInput (const char *, s9xcommand_t *); // defined in sdlvideo
+s9xcommand_t S9xGetDisplayCommandT (const char *); // defined in sdlvideo
+void S9xParseInputConfig(ConfigFile &, int pass); // defined in sdlinput
 
 static long log2 (long);
 static void NSRTControllerSetup (void);
 static int make_snes9x_dirs (void);
-
-#ifdef JOYSTICK_SUPPORT
-static void InitJoysticks (void);
-static void ReadJoysticks (void);
-#endif
-
 
 void _splitpath (const char *path, char *drive, char *dir, char *fname, char *ext)
 {
@@ -231,6 +206,9 @@ void S9xExtraUsage (void)
 	S9xExtraDisplayUsage();
 }
 
+/*
+ * domaemon: arg is parsed as ParseArg -> ParseDisplayArg
+ */
 void S9xParseArg (char **argv, int &i, int argc)
 {
 	if (!strcasecmp(argv[i], "-multi"))
@@ -255,7 +233,7 @@ void S9xParseArg (char **argv, int &i, int argc)
 	if (!strcasecmp(argv[i], "-buffersize"))
 	{
 		if (i + 1 < argc)
-			unixSettings.SoundBufferSize = atoi(argv[++i]);
+			sound_buffer_size = atoi(argv[++i]);
 		else
 			S9xUsage();
 	}
@@ -371,32 +349,23 @@ static void NSRTControllerSetup (void)
 	}
 }
 
+/*
+ * domaemon: config is parsed as
+ *
+ * ParsePortConfig -> ParseDisplayConfig
+ * ParsePortConfig -> ParseInputConfig
+ */
+
 void S9xParsePortConfig (ConfigFile &conf, int pass)
 {
-	s9x_base_dir                   = conf.GetStringDup("Unix::BaseDir",             default_dir);
-	snapshot_filename              = conf.GetStringDup("Unix::SnapshotFilename",    NULL);
-	play_smv_filename              = conf.GetStringDup("Unix::PlayMovieFilename",   NULL);
-	record_smv_filename            = conf.GetStringDup("Unix::RecordMovieFilename", NULL);
+	s9x_base_dir                = conf.GetStringDup("Unix::BaseDir",             default_dir);
+	snapshot_filename           = conf.GetStringDup("Unix::SnapshotFilename",    NULL);
+	play_smv_filename           = conf.GetStringDup("Unix::PlayMovieFilename",   NULL);
+	record_smv_filename         = conf.GetStringDup("Unix::RecordMovieFilename", NULL);
+	sound_buffer_size           = conf.GetUInt     ("Unix::SoundBufferSize",     100);
 
-	unixSettings.SoundBufferSize   = conf.GetUInt     ("Unix::SoundBufferSize",     100);
-
-	keymaps.clear();
-	if (!conf.GetBool("Unix::ClearAllControls", false))
-	{
-		// Using 'Joypad# Axis'
-		keymaps.push_back(strpair_t("J00:Axis0",      "Joypad1 Axis Left/Right T=50%"));
-		keymaps.push_back(strpair_t("J00:Axis1",      "Joypad1 Axis Up/Down T=50%"));
-
-		keymaps.push_back(strpair_t("J00:B0",         "Joypad1 X"));
-		keymaps.push_back(strpair_t("J00:B1",         "Joypad1 A"));
-		keymaps.push_back(strpair_t("J00:B2",         "Joypad1 B"));
-		keymaps.push_back(strpair_t("J00:B3",         "Joypad1 Y"));
-
-		keymaps.push_back(strpair_t("J00:B6",         "Joypad1 L"));
-		keymaps.push_back(strpair_t("J00:B7",         "Joypad1 R"));
-		keymaps.push_back(strpair_t("J00:B8",         "Joypad1 Select"));
-		keymaps.push_back(strpair_t("J00:B11",        "Joypad1 Start"));
-	}
+	// domaemon: default input configuration
+	S9xParseInputConfig(conf, 1);
 
 	std::string section = S9xParseDisplayConfig(conf, 1);
 
@@ -509,6 +478,41 @@ const char * S9xBasename (const char *f)
 	return (f);
 }
 
+const char * S9xSelectFilename (const char *def, const char *dir1, const char *ext1, const char *title)
+{
+	static char	s[PATH_MAX + 1];
+	char		buffer[PATH_MAX + 1];
+
+	printf("\n%s (default: %s): ", title, def);
+	fflush(stdout);
+
+	if (fgets(buffer, PATH_MAX + 1, stdin))
+	{
+		char	drive[_MAX_DRIVE + 1], dir[_MAX_DIR + 1], fname[_MAX_FNAME + 1], ext[_MAX_EXT + 1];
+
+		char	*p = buffer;
+		while (isspace(*p))
+			p++;
+		if (!*p)
+		{
+			strncpy(buffer, def, PATH_MAX + 1);
+			buffer[PATH_MAX] = 0;
+			p = buffer;
+		}
+
+		char	*q = strrchr(p, '\n');
+		if (q)
+			*q = 0;
+
+		_splitpath(p, drive, dir, fname, ext);
+		_makepath(s, drive, *dir ? dir : dir1, fname, *ext ? ext : ext1);
+
+		return (s);
+	}
+
+	return (NULL);
+}
+
 const char * S9xChooseFilename (bool8 read_only)
 {
 	char	s[PATH_MAX + 1];
@@ -600,13 +604,11 @@ void S9xAutoSaveSRAM (void)
 void S9xSyncSpeed (void)
 {
   // doemaemon: not sure how crucial this is atm.
-#ifdef HAVE_SDL
 	if (Settings.SoundSync)
 	{
 		while (!S9xSyncSound())
 			usleep(0);
 	}
-#endif
 
 	if (Settings.DumpStreams)
 		return;
@@ -739,6 +741,8 @@ void S9xSyncSpeed (void)
 	}
 }
 
+
+// domaemon: MapInput (JS) -> MapDisplayInput (KB)
 bool8 S9xMapInput (const char *n, s9xcommand_t *cmd)
 {
 	int		i, j, d;
@@ -785,27 +789,6 @@ unrecog:
 	return (S9xMapDisplayInput(n, cmd));
 }
 
-bool S9xPollButton (uint32 id, bool *pressed)
-{
-	return (S9xDisplayPollButton(id, pressed));
-}
-
-bool S9xPollAxis (uint32 id, int16 *value)
-{
-	return (S9xDisplayPollAxis(id, value));
-}
-
-bool S9xPollPointer (uint32 id, int16 *x, int16 *y)
-{
-	return (S9xDisplayPollPointer(id, x, y));
-}
-
-// domaemon: needed by SNES9X
-void S9xHandlePortCommand (s9xcommand_t cmd, int16 data1, int16 data2)
-{
-	return;
-}
-
 void S9xSetupDefaultKeymap (void)
 {
 	s9xcommand_t	cmd;
@@ -838,47 +821,6 @@ void S9xSetupDefaultKeymap (void)
 	}
 
 	keymaps.clear();
-}
-
-void S9xInitInputDevices (void)
-{
-#ifdef JOYSTICK_SUPPORT
-	InitJoysticks();
-#endif
-}
-
-static void InitJoysticks (void)
-{
-	// domaemon: 1) initializing the joystic subsystem
-	SDL_InitSubSystem (SDL_INIT_JOYSTICK);
-
-	/*
-	 * domaemon: 2) check how may joysticks are connected
-	 * domaemon: 3) relate paddev1 to SDL_Joystick[0], paddev2 to SDL_Joystick[1]...
-	 * domaemon: 4) print out the joystick name and capabilities
-	 */
-
-	num_joysticks = SDL_NumJoysticks();
-
-	if (num_joysticks == 0)
-	{
-		fprintf(stderr, "joystick: No joystick found.\n");
-	}
-	else
-	{
-		SDL_JoystickEventState (SDL_ENABLE);
-
-		for (int i = 0; i < num_joysticks; i++)
-		{
-			joystick[i] = SDL_JoystickOpen (i);
-			printf ("  %s\n", SDL_JoystickName(i));
-			printf ("  %d-axis %d-buttons %d-balls %d-hats \n",
-				SDL_JoystickNumAxes(joystick[i]),
-				SDL_JoystickNumButtons(joystick[i]),
-				SDL_JoystickNumBalls(joystick[i]),
-				SDL_JoystickNumHats(joystick[i]));
-		}
-	}
 }
 
 void S9xExit (void)
@@ -918,7 +860,7 @@ int main (int argc, char **argv)
 	if (argc < 2)
 		S9xUsage();
 
-	printf("\n\nSnes9x " VERSION " for unix\n");
+	printf("\n\nSnes9x " VERSION " for unix/SDL\n");
 
 	snprintf(default_dir, PATH_MAX + 1, "%s%s%s", getenv("HOME"), SLASH_STR, ".snes9x");
 	s9x_base_dir = default_dir;
@@ -949,16 +891,10 @@ int main (int argc, char **argv)
 	Settings.TurboSkipFrames = 15;
 	Settings.CartAName[0] = 0;
 	Settings.CartBName[0] = 0;
+
 #ifdef NETPLAY_SUPPORT
 	Settings.ServerName[0] = 0;
 #endif
-
-#ifdef JOYSTICK_SUPPORT
-	unixSettings.JoystickEnabled = TRUE;
-#else
-	unixSettings.JoystickEnabled = FALSE;
-#endif
-	unixSettings.SoundBufferSize = 100;
 
 	CPU.Flags = 0;
 
@@ -975,7 +911,7 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 
-	S9xInitSound(unixSettings.SoundBufferSize, 0);
+	S9xInitSound(sound_buffer_size, 0);
 	S9xSetSoundMute(TRUE);
 
 	S9xReportControllers();
@@ -1073,9 +1009,6 @@ int main (int argc, char **argv)
 	S9xInitInputDevices();
 	S9xInitDisplay(argc, argv);
 	S9xSetupDefaultKeymap();
-#ifndef HAVE_SDL
-	S9xTextMode();
-#endif
 
 #ifdef NETPLAY_SUPPORT
 	if (strlen(Settings.ServerName) == 0)

@@ -17,9 +17,8 @@ The following features are either removed or not tested.
 - Mouse pointer input.
 - Port specific commands
 
-The following features are added compared to the unix/x11.cpp 
+The following features are added/modified on the unix/x11.cpp 
 
-+ Hat support
 + <keyname> is now SDL_keysym (see the /usr/include/SDL/SDL_keysym.h).
 
 ================================================================================
@@ -46,7 +45,7 @@ Pointer Input:
   M00:B#                     Mouse buttons.
 
 ================================================================================
-S9xMapButton/S9xMapAxis/S9xMapPointer ID
+S9xMapButton/S9xMapAxis/S9xMapPointer ID structure
 ================================================================================
 
 MapButton ID is a 32bit integer value to inform the button ID to the snes9x engine
@@ -73,12 +72,12 @@ switch B (4 bit)
  switch ABCD (16 bit)
   case KMOD_x: MOD key masks.
 
- switch EFGH (16 bit)
+ switch FGH (12 bit)
   case SDLK_a: SDL_keysym (e.g. SDLK_a)
 
 #elif (joystick)
 
- switch EFGH (16 bit)
+ switch FGH (12 bit)
   event.jbutton.button (0, 1, 2...)
 
 #endif

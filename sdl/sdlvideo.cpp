@@ -50,36 +50,25 @@
 #include "blit.h"
 #include "display.h"
 
-#define HAVE_SDL 1
-
-#ifdef HAVE_SDL
-
 #include <SDL/SDL.h>
+#include "sdl_snes9x.h"
 #include <iostream>
 SDL_Surface *screen;
-using namespace std;
-std::map <string, int> name_sdlkeysym;
 
-#endif
+using namespace std;
+extern std::map <string, int> name_sdlkeysym;
 
 struct GUIData
 {
 	uint8			*snes_buffer;
-#ifndef HAVE_SDL
-	uint8			*filter_buffer;
-#endif
 	uint8			*blit_screen;
 	uint32			blit_screen_pitch;
-	int				video_mode;
-	int				mouse_x;
-	int				mouse_y;
+	int			video_mode;
         bool8                   fullscreen;
 };
-
 static struct GUIData	GUI;
 
-typedef	std::pair<std::string, std::string>	strpair_t;
-extern	std::vector<strpair_t>				keymaps;
+ConfigFile::secvec_t	keymaps;
 
 typedef	void (* Blitter) (uint8 *, int, uint8 *, int, int, int);
 
@@ -158,38 +147,6 @@ const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 	if (pass != 1)
 		return ("Unix/X11");
 
-	// domaemon: FIXME, just collecting the essentials.
-	// domaemon: *) here we define the keymapping.
-	if (!conf.GetBool("Unix::ClearAllControls", false))
-	{
-		keymaps.push_back(strpair_t("K00:SDLK_RIGHT",        "Joypad1 Right"));
-		keymaps.push_back(strpair_t("K00:SDLK_LEFT",         "Joypad1 Left"));
-		keymaps.push_back(strpair_t("K00:SDLK_DOWN",         "Joypad1 Down"));
-		keymaps.push_back(strpair_t("K00:SDLK_UP",           "Joypad1 Up"));
-		keymaps.push_back(strpair_t("K00:SDLK_RETURN",       "Joypad1 Start"));
-		keymaps.push_back(strpair_t("K00:SDLK_SPACE",        "Joypad1 Select"));
-		keymaps.push_back(strpair_t("K00:SDLK_d",            "Joypad1 A"));
-		keymaps.push_back(strpair_t("K00:SDLK_c",            "Joypad1 B"));
-		keymaps.push_back(strpair_t("K00:SDLK_s",            "Joypad1 X"));
-		keymaps.push_back(strpair_t("K00:SDLK_x",            "Joypad1 Y"));
-		keymaps.push_back(strpair_t("K00:SDLK_a",            "Joypad1 L"));
-		keymaps.push_back(strpair_t("K00:SDLK_z",            "Joypad1 R"));
-
-		// domaemon: *) GetSDLKeyFromName().
-		name_sdlkeysym["SDLK_s"] = SDLK_s;
-		name_sdlkeysym["SDLK_d"] = SDLK_d;
-		name_sdlkeysym["SDLK_x"] = SDLK_x;
-		name_sdlkeysym["SDLK_c"] = SDLK_c;
-		name_sdlkeysym["SDLK_a"] = SDLK_a;
-		name_sdlkeysym["SDLK_z"] = SDLK_z;
-		name_sdlkeysym["SDLK_UP"] = SDLK_UP;
-		name_sdlkeysym["SDLK_DOWN"] = SDLK_DOWN;
-		name_sdlkeysym["SDLK_RIGHT"] = SDLK_RIGHT;
-		name_sdlkeysym["SDLK_LEFT"] = SDLK_LEFT;
-		name_sdlkeysym["SDLK_RETURN"] = SDLK_RETURN;
-		name_sdlkeysym["SDLK_SPACE"] = SDLK_SPACE;
-	}
-
 	if (conf.Exists("Unix/X11::VideoMode"))
 	{
 		GUI.video_mode = conf.GetUInt("Unix/X11::VideoMode", VIDEOMODE_BLOCKY);
@@ -198,7 +155,6 @@ const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 	}
 	else
 		GUI.video_mode = VIDEOMODE_BLOCKY;
-
 
 	return ("Unix/X11");
 }
@@ -293,12 +249,6 @@ static void SetupImage (void)
 
 	// domaemon: Add 2 lines before drawing.
 	GFX.Screen = (uint16 *) (GUI.snes_buffer + (GFX.Pitch * 2 * 2));
-
-#ifndef HAVE_SDL // domaemon: this is used as the destination buffer in the original unix code.
-	GUI.filter_buffer = (uint8 *) calloc((SNES_WIDTH * 2) * 2 * (SNES_HEIGHT_EXTENDED * 2), 1);
-	if (!GUI.filter_buffer)
-		FatalError("Failed to allocate GUI.filter_buffer.");
-#endif
 
 	if (GUI.fullscreen == TRUE)
 	{
@@ -406,97 +356,6 @@ static void Repaint (bool8 isFrameBoundry)
         SDL_Flip(screen);
 }
 
-void S9xProcessEvents (bool8 block)
-{
-	SDL_Event event;
-	bool8 quit_state = FALSE;
-
-	while ((block) || (SDL_PollEvent (&event) != 0))
-	{
-		switch (event.type) {
-		case SDL_KEYDOWN:
-		case SDL_KEYUP:
-			// domaemon: not sure it's the best idea, but reserving the SDLK_q for quit.
-			if (event.key.keysym.sym == SDLK_q)
-			{
-				quit_state = TRUE;
-			} 
-			else
-			{
-				S9xReportButton(event.key.keysym.mod << 16 | // keyboard mod
-						event.key.keysym.sym, // keyboard ksym
-						event.type == SDL_KEYDOWN); // press or release
-			}
-			break;
-
-/***** Joystick starts *****/
-
-		case SDL_JOYBUTTONDOWN:
-		case SDL_JOYBUTTONUP:
-			S9xReportButton(0x80000000 | // joystick button
-					(event.jbutton.which << 24) | // joystick index
-					event.jbutton.button, // joystick button code
-					event.type == SDL_JOYBUTTONDOWN); // press or release
-			break;
-
-		case SDL_JOYAXISMOTION:
-			S9xReportAxis(0x80008000 | // joystick axis
-				      (event.jaxis.which << 24) | // joystick index
-				      event.jaxis.axis, // joystick axis
-				      event.jaxis.value); // axis value
-			break;
-
-/***** Joystick ends *****/
-
-		case SDL_QUIT:
-			// domaemon: we come here when the window is getting closed.
-			quit_state = TRUE;
-			break;
-		}
-	}
-	
-	if (quit_state == TRUE)
-	{
-		printf ("Quit Event. Bye.\n");
-		S9xExit();
-	}
-}
-
-const char * S9xSelectFilename (const char *def, const char *dir1, const char *ext1, const char *title)
-{
-	static char	s[PATH_MAX + 1];
-	char		buffer[PATH_MAX + 1];
-
-	printf("\n%s (default: %s): ", title, def);
-	fflush(stdout);
-
-	if (fgets(buffer, PATH_MAX + 1, stdin))
-	{
-		char	drive[_MAX_DRIVE + 1], dir[_MAX_DIR + 1], fname[_MAX_FNAME + 1], ext[_MAX_EXT + 1];
-
-		char	*p = buffer;
-		while (isspace(*p))
-			p++;
-		if (!*p)
-		{
-			strncpy(buffer, def, PATH_MAX + 1);
-			buffer[PATH_MAX] = 0;
-			p = buffer;
-		}
-
-		char	*q = strrchr(p, '\n');
-		if (q)
-			*q = 0;
-
-		_splitpath(p, drive, dir, fname, ext);
-		_makepath(s, drive, *dir ? dir : dir1, fname, *ext ? ext : ext1);
-
-		return (s);
-	}
-
-	return (NULL);
-}
-
 void S9xMessage (int type, int number, const char *message)
 {
 	const int	max = 36 * 3;
@@ -523,7 +382,7 @@ const char * S9xStringInput (const char *message)
 
 void S9xSetTitle (const char *string)
 {
-  SDL_WM_SetCaption(string, string);
+	SDL_WM_SetCaption(string, string);
 }
 
 s9xcommand_t S9xGetDisplayCommandT (const char *n)
@@ -647,32 +506,6 @@ unrecog:
 	return (false);
 }
 
-bool S9xDisplayPollButton (uint32 id, bool *pressed)
-{
-	return (false);
-}
-
-bool S9xDisplayPollAxis (uint32 id, int16 *value)
-{
-	return (false);
-}
-
-bool S9xDisplayPollPointer (uint32 id, int16 *x, int16 *y)
-{
-	if ((id & 0xc0008000) != 0x40008000)
-		return (false);
-
-	int	d = (id >> 24) & 0x3f,
-		n = id & 0x7fff;
-
-	if (d != 0 || n != 0)
-		return (false);
-
-	*x = GUI.mouse_x;
-	*y = GUI.mouse_y;
-
-	return (true);
-}
 
 void S9xSetPalette (void)
 {

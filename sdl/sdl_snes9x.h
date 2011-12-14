@@ -1,11 +1,9 @@
 #include "port.h"
+#include "conffile.h"
 
-struct SUnixSettings
-{
-	bool8	JoystickEnabled;
-	uint32	SoundBufferSize;
-};
+typedef std::pair<std::string, std::string>	strpair_t;
+extern ConfigFile::secvec_t	keymaps;
 
-extern SUnixSettings	unixSettings;
+
 
 
