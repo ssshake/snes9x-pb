@@ -391,7 +391,6 @@ libs................. $S9XLIBS
 features:
 screenshot support... $enable_screenshot
 netplay support...... $enable_netplay
-gamepad support...... $enable_gamepad
 GZIP support......... $enable_gzip
 ZIP support.......... $enable_zip
 JMA support.......... $enable_jma
