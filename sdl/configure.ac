@@ -111,40 +111,6 @@ AC_S9X_COMPILER_FLAG([-Wall],                 [Wall])
 AC_S9X_COMPILER_FLAG([-W],                    [W])
 AC_S9X_COMPILER_FLAG([-Wno-unused-parameter], [Wno_unused_parameter])
 
-# Check if the OS is Linux.
-
-AC_MSG_CHECKING([whether the OS is Linux])
-
-AC_CACHE_VAL([snes9x_cv_linux_os],
-[
-	case "$target" in
-		*-*-linux*)
-			snes9x_cv_linux_os="yes"
-			;;
-		*)
-			snes9x_cv_linux_os="no"
-			;;
-	esac
-])
-
-AC_MSG_RESULT([$snes9x_cv_linux_os])
-
-# Enable gamepad support on Linux.
-
-AC_ARG_ENABLE([gamepad],
-	[AS_HELP_STRING([--enable-gamepad],
-		[enable gamepad support if available (default: yes)])],
-	[], [enable_gamepad="yes"])
-
-if test "x$enable_gamepad" = "xyes"; then
-	if test "x$snes9x_cv_linux_os" = "xyes"; then
-		S9XDEFS="$S9XDEFS -DJOYSTICK_SUPPORT"
-	else
-		AC_MSG_WARN([Your OS is not Linux. Build without gamepad support.])
-		enable_gamepad="no"
-	fi
-fi
-
 # Enable debugger.
 
 S9XDEBUGGER="#S9XDEBUGGER=1"

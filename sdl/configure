@@ -669,7 +669,6 @@ ac_user_opts='
 enable_option_checking
 enable_debug
 enable_neon
-enable_gamepad
 enable_debugger
 enable_netplay
 enable_gzip
@@ -1309,7 +1308,6 @@ Optional Features:
                           (default: no)
   --enable-neon           use the optimisation flag to enable NEON
                           instructions (default: no)
-  --enable-gamepad        enable gamepad support if available (default: yes)
   --enable-debugger       enable debugger (default: no)
   --enable-netplay        enable netplay support (default: no)
   --enable-gzip           enable GZIP support through zlib (default: yes)
@@ -4285,50 +4283,6 @@ $as_echo "no" >&6; }
 
 	fi
 
-
-# Check if the OS is Linux.
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the OS is Linux" >&5
-$as_echo_n "checking whether the OS is Linux... " >&6; }
-
-if test "${snes9x_cv_linux_os+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-
-	case "$target" in
-		*-*-linux*)
-			snes9x_cv_linux_os="yes"
-			;;
-		*)
-			snes9x_cv_linux_os="no"
-			;;
-	esac
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $snes9x_cv_linux_os" >&5
-$as_echo "$snes9x_cv_linux_os" >&6; }
-
-# Enable gamepad support on Linux.
-
-# Check whether --enable-gamepad was given.
-if test "${enable_gamepad+set}" = set; then :
-  enableval=$enable_gamepad;
-else
-  enable_gamepad="yes"
-fi
-
-
-if test "x$enable_gamepad" = "xyes"; then
-	if test "x$snes9x_cv_linux_os" = "xyes"; then
-		S9XDEFS="$S9XDEFS -DJOYSTICK_SUPPORT"
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Your OS is not Linux. Build without gamepad support." >&5
-$as_echo "$as_me: WARNING: Your OS is not Linux. Build without gamepad support." >&2;}
-		enable_gamepad="no"
-	fi
-fi
 
 # Enable debugger.
 
