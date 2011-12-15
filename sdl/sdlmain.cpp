@@ -46,7 +46,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include <SDL/SDL.h>
 #include "sdl_snes9x.h"
 
 #include "snes9x.h"
@@ -105,8 +104,6 @@ static uint32	joypads[8];
 static uint32	old_joypads[8];
 #endif
 
-bool8 S9xMapDisplayInput (const char *, s9xcommand_t *); // defined in sdlvideo
-s9xcommand_t S9xGetDisplayCommandT (const char *); // defined in sdlvideo
 void S9xParseInputConfig(ConfigFile &, int pass); // defined in sdlinput
 
 static long log2 (long);
@@ -183,7 +180,7 @@ static long log2 (long num)
 	return (n);
 }
 
-void S9xExtraUsage (void)
+void S9xExtraUsage (void) // domaemon: ExtraUsage -> ExtraDisplayUsage
 {
 	/*                               12345678901234567890123456789012345678901234567890123456789012345678901234567890 */
 
@@ -352,8 +349,8 @@ static void NSRTControllerSetup (void)
 /*
  * domaemon: config is parsed as
  *
- * ParsePortConfig -> ParseDisplayConfig
  * ParsePortConfig -> ParseInputConfig
+ * ParsePortConfig -> ParseDisplayConfig
  */
 
 void S9xParsePortConfig (ConfigFile &conf, int pass)
@@ -739,88 +736,6 @@ void S9xSyncSpeed (void)
 		next1.tv_sec += next1.tv_usec / 1000000;
 		next1.tv_usec %= 1000000;
 	}
-}
-
-
-// domaemon: MapInput (JS) -> MapDisplayInput (KB)
-bool8 S9xMapInput (const char *n, s9xcommand_t *cmd)
-{
-	int		i, j, d;
-	char	*c;
-
-	// domaemon: linking PseudoPointer# and command
-	if (!strncmp(n, "PseudoPointer", 13) && n[13] >= '1' && n[13] <= '8' && n[14] == '\0')
-		return (S9xMapPointer(PseudoPointerBase + (n[13] - '1'), *cmd, false));
-
-	// domaemon: linking PseudoButton# and command
-	if (!strncmp(n, "PseudoButton", 12) && isdigit(n[12]) && (j = strtol(n + 12, &c, 10)) < 256 && (c == NULL || *c == '\0'))
-		return (S9xMapButton(PseudoButtonBase + j, *cmd, false));
-
-	if (n[0] != 'J' || !isdigit(n[1]) || !isdigit(n[2]) || n[3] != ':')
-		goto unrecog;
-
-	d = ((n[1] - '0') * 10 + (n[2] - '0')) << 24;
-	d |= 0x80000000;
-	i = 4;
-
-	if (!strncmp(n + i, "Axis", 4))
-	{
-		d |= 0x8000; // Axis mode
-		i += 4;
-	}
-	else
-	{	
-		if (n[i] == 'B')
-			i++;
-		else
-			goto unrecog;
-	}
-	
-	d |= j = strtol(n + i, &c, 10); // Axis or Button id
-	if ((c != NULL && *c != '\0') || j > 0x3fff)
-		goto unrecog;
-
-	if (d & 0x8000)
-		return (S9xMapAxis(d, *cmd, false));
-
-	return (S9xMapButton(d, *cmd, false));
-
-unrecog:
-	return (S9xMapDisplayInput(n, cmd));
-}
-
-void S9xSetupDefaultKeymap (void)
-{
-	s9xcommand_t	cmd;
-
-	S9xUnmapAllControls();
-
-	for (ConfigFile::secvec_t::iterator i = keymaps.begin(); i != keymaps.end(); i++)
-	{
-		cmd = S9xGetDisplayCommandT(i->second.c_str());
-
-		if (cmd.type == S9xBadMapping)
-		{
-			cmd = S9xGetCommandT(i->second.c_str());
-			if (cmd.type == S9xBadMapping)
-			{
-				std::string	s("Unrecognized command '");
-				s += i->second + "'";
-				perror(s.c_str());
-				continue;
-			}
-		}
-
-		if (!S9xMapInput(i->first.c_str(), &cmd))
-		{
-			std::string	s("Could not map '");
-			s += i->second + "' to '" + i->first + "'";
-			perror(s.c_str());
-			continue;
-		}
-	}
-
-	keymaps.clear();
 }
 
 void S9xExit (void)

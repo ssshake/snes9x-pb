@@ -1,3 +1,4 @@
+#include <SDL/SDL.h>
 #include "port.h"
 #include "conffile.h"
 

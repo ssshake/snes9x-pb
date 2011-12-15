@@ -50,16 +50,11 @@
 #include "blit.h"
 #include "display.h"
 
-#include <SDL/SDL.h>
 #include "sdl_snes9x.h"
-#include <iostream>
-SDL_Surface *screen;
-
-using namespace std;
-extern std::map <string, int> name_sdlkeysym;
 
 struct GUIData
 {
+	SDL_Surface             *sdl_screen;
 	uint8			*snes_buffer;
 	uint8			*blit_screen;
 	uint32			blit_screen_pitch;
@@ -67,8 +62,6 @@ struct GUIData
         bool8                   fullscreen;
 };
 static struct GUIData	GUI;
-
-ConfigFile::secvec_t	keymaps;
 
 typedef	void (* Blitter) (uint8 *, int, uint8 *, int, int, int);
 
@@ -145,18 +138,18 @@ void S9xParseDisplayArg (char **argv, int &i, int argc)
 const char * S9xParseDisplayConfig (ConfigFile &conf, int pass)
 {
 	if (pass != 1)
-		return ("Unix/X11");
+		return ("Unix/SDL");
 
-	if (conf.Exists("Unix/X11::VideoMode"))
+	if (conf.Exists("Unix/SDL::VideoMode"))
 	{
-		GUI.video_mode = conf.GetUInt("Unix/X11::VideoMode", VIDEOMODE_BLOCKY);
+		GUI.video_mode = conf.GetUInt("Unix/SDL::VideoMode", VIDEOMODE_BLOCKY);
 		if (GUI.video_mode < 1 || GUI.video_mode > 8)
 			GUI.video_mode = VIDEOMODE_BLOCKY;
 	}
 	else
 		GUI.video_mode = VIDEOMODE_BLOCKY;
 
-	return ("Unix/X11");
+	return ("Unix/SDL");
 }
 
 static void FatalError (const char *str)
@@ -195,12 +188,12 @@ void S9xInitDisplay (int argc, char **argv)
 	 */	
         if (GUI.fullscreen == TRUE)
         {
-                screen = SDL_SetVideoMode(0, 0, 16, SDL_FULLSCREEN);
+                GUI.sdl_screen = SDL_SetVideoMode(0, 0, 16, SDL_FULLSCREEN);
         } else {
-                screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
+                GUI.sdl_screen = SDL_SetVideoMode(SNES_WIDTH * 2, SNES_HEIGHT_EXTENDED * 2, 16, 0);
         }
 
-        if (screen == NULL)
+        if (GUI.sdl_screen == NULL)
 	{
 		printf("Unable to set video mode: %s\n", SDL_GetError());
 		exit(1);
@@ -257,17 +250,17 @@ static void SetupImage (void)
 		int offset_byte;
 
 
-		offset_height_pix = (screen->h - (SNES_HEIGHT * 2)) / 2;
-		offset_width_pix = (screen->w - (SNES_WIDTH * 2)) / 2;
+		offset_height_pix = (GUI.sdl_screen->h - (SNES_HEIGHT * 2)) / 2;
+		offset_width_pix = (GUI.sdl_screen->w - (SNES_WIDTH * 2)) / 2;
 		
-		offset_byte = (screen->w * offset_height_pix + offset_width_pix) * 2;
+		offset_byte = (GUI.sdl_screen->w * offset_height_pix + offset_width_pix) * 2;
 
-		GUI.blit_screen       = (uint8 *) screen->pixels + offset_byte;
-		GUI.blit_screen_pitch = screen->w * 2;
+		GUI.blit_screen       = (uint8 *) GUI.sdl_screen->pixels + offset_byte;
+		GUI.blit_screen_pitch = GUI.sdl_screen->w * 2;
 	}
 	else 
 	{
-		GUI.blit_screen       = (uint8 *) screen->pixels;
+		GUI.blit_screen       = (uint8 *) GUI.sdl_screen->pixels;
 		GUI.blit_screen_pitch = SNES_WIDTH * 2 * 2; // window size =(*2); 2 byte pir pixel =(*2)
 	}
 
@@ -353,7 +346,7 @@ void S9xPutImage (int width, int height)
 
 static void Repaint (bool8 isFrameBoundry)
 {
-        SDL_Flip(screen);
+        SDL_Flip(GUI.sdl_screen);
 }
 
 void S9xMessage (int type, int number, const char *message)
@@ -384,128 +377,6 @@ void S9xSetTitle (const char *string)
 {
 	SDL_WM_SetCaption(string, string);
 }
-
-s9xcommand_t S9xGetDisplayCommandT (const char *n)
-{
-	s9xcommand_t	cmd;
-
-	cmd.type         = S9xBadMapping;
-	cmd.multi_press  = 0;
-	cmd.button_norpt = 0;
-	cmd.port[0]      = 0xff;
-	cmd.port[1]      = 0;
-	cmd.port[2]      = 0;
-	cmd.port[3]      = 0;
-
-	return (cmd);
-}
-
-char * S9xGetDisplayCommandName (s9xcommand_t cmd)
-{
-	return (strdup("None"));
-}
-
-void S9xHandleDisplayCommand (s9xcommand_t cmd, int16 data1, int16 data2)
-{
-	return;
-}
-
-// domaemon: 2) here we send the keymapping request to the SNES9X
-bool8 S9xMapDisplayInput (const char *n, s9xcommand_t *cmd)
-{
-	int	i, d;
-
-	if (!isdigit(n[1]) || !isdigit(n[2]) || n[3] != ':')
-		goto unrecog;
-
-	d = ((n[1] - '0') * 10 + (n[2] - '0')) << 24;
-
-	switch (n[0])
-	{
-		case 'K':
-		{
-		  int key;
-
-			d |= 0x00000000;
-
-			for (i = 4; n[i] != '\0' && n[i] != '+'; i++) ;
-
-			if (n[i] == '\0' || i == 4) // domaemon: no mod keys.
-				i = 4;
-
-#if 0 // domaemon: mod keys not working properly.
-                        else // domaemon: with mod keys
-                        {
-                                for (i = 4; n[i] != '+'; i++)
-                                {
-                                        switch (n[i])
-                                        {
-                                                case 'S': d |= KMOD_SHIFT  << 16; break;
-                                                case 'C': d |= KMOD_CTRL   << 16; break;
-                                                case 'A': d |= KMOD_ALT    << 16; break;
-                                                case 'M': d |= KMOD_META   << 16; break;
-                                                default:  goto unrecog;
-                                        }
-                                }
-                                i++;
-                        }
-#endif
-
-			string keyname (n + i); // domaemon: SDL_keysym in string format.
-			key = name_sdlkeysym[keyname];
-
-			d |= key;
-			return (S9xMapButton(d, *cmd, false));
-
-		}
-
-		case 'M':
-		{
-			char	*c;
-			int		j;
-
-			d |= 0x40000000;
-
-			if (!strncmp(n + 4, "Pointer", 7))
-			{
-				d |= 0x8000;
-
-				if (n[11] == '\0')
-					return (S9xMapPointer(d, *cmd, true));
-
-				i = 11;
-			}
-			else
-			if (n[4] == 'B')
-				i = 5;
-			else
-				goto unrecog;
-
-			d |= j = strtol(n + i, &c, 10);
-
-			if ((c != NULL && *c != '\0') || j > 0x7fff)
-				goto unrecog;
-
-			if (d & 0x8000)
-				return (S9xMapPointer(d, *cmd, true));
-
-			return (S9xMapButton(d, *cmd, false));
-		}
-
-		default:
-			break;
-	}
-
-unrecog:
-	char	*err = new char[strlen(n) + 34];
-
-	sprintf(err, "Unrecognized input device name '%s'", n);
-	perror(err);
-	delete [] err;
-
-	return (false);
-}
-
 
 void S9xSetPalette (void)
 {
