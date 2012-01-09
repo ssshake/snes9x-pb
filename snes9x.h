@@ -435,6 +435,10 @@ struct SSettings
 	bool8	UpAndDown;
 
 	bool8	OpenGLEnable;
+
+#if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
+	char    rom_filename[51];
+#endif
 };
 
 struct SSNESGameFixes

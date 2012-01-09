@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<emulation version="1">
+<key x="10" y="10" width="34" height="52" sym="13"  mod="0"  scancode="28"  unicode="0" image="start.png">
+<label x="0" y="0" width="34" height="52" image="start.png"/>
+</key>
+<key x="10" y="60" width="34" height="52" sym="32"  mod="0"  scancode="57"  unicode="0" image="select.png">
+<label x="0" y="0" width="34" height="52" image="select.png"/>
+</key>
+<key x="50" y="470" width="40" height="40" sym="273"  mod="0"  scancode="72"  unicode="0" image="up.png">
+<label x="0" y="0" width="40" height="40" image="up.png"/>
+</key>
+<key x="50" y="550" width="40" height="40" sym="274"  mod="0"  scancode="80"  unicode="0" image="down.png">
+<label x="0" y="0" width="40" height="40" image="down.png"/>
+</key>
+<key x="10" y="510" width="40" height="40" sym="276"  mod="0"  scancode="75"  unicode="0" image="left.png">
+<label x="0" y="0" width="40" height="40" image="left.png"/>
+</key>
+<key x="90" y="510" width="40" height="40" sym="275"  mod="0"  scancode="77"  unicode="0" image="right.png">
+<label x="0" y="0" width="40" height="40" image="right.png"/>
+</key>
+<key x="922" y="470" width="40" height="40" sym="115"  mod="0"  scancode="0"  unicode="0" image="x.png">
+<label x="0" y="0" width="40" height="40" image="x.png"/>
+</key>
+<key x="922" y="550" width="40" height="40" sym="99"  mod="0"  scancode="0"  unicode="0" image="b.png">
+<label x="0" y="0" width="40" height="40" image="b.png"/>
+</key>
+<key x="882" y="510" width="40" height="40" sym="120"  mod="0"  scancode="0"  unicode="0" image="y.png">
+<label x="0" y="0" width="40" height="40" image="y.png"/>
+</key>
+<key x="962" y="510" width="40" height="40" sym="100"  mod="0"  scancode="0"  unicode="0" image="a.png">
+<label x="0" y="0" width="40" height="40" image="a.png"/>
+</key>
+<key x="10" y="420" width="80" height="20" sym="97"  mod="0"  scancode="0"  unicode="0" image="bumper.png">
+<label x="0" y="0" width="80" height="20" image="bumper.png"/>
+</key>
+<key x="922" y="420" width="80" height="20" sym="122"  mod="0"  scancode="0"  unicode="0" image="bumper.png">
+<label x="0" y="0" width="80" height="20" image="bumper.png"/>
+</key>
+</emulation>

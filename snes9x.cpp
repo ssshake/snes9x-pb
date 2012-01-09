@@ -396,7 +396,9 @@ void S9xLoadConfigFiles (char **argv, int argc)
 	}
 
 	rom_filename = conf.GetStringDup("ROM::Filename", NULL);
-
+#if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
+	strcpy(Settings.rom_filename, rom_filename);
+#endif
 	// Sound
 
 	Settings.SoundSync                  =  conf.GetBool("Sound::Sync",                         true);
@@ -437,6 +439,7 @@ void S9xLoadConfigFiles (char **argv, int argc)
 
 	if (!strcasecmp(conf.GetString("Settings::FrameSkip", "Auto"), "Auto"))
 		Settings.SkipFrames = AUTO_FRAMERATE;
+		//Settings.SkipFrames = 0;
 	else
 		Settings.SkipFrames = conf.GetUInt("Settings::FrameSkip", 0) + 1;
 
