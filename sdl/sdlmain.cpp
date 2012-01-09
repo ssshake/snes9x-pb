@@ -376,7 +376,7 @@ static int make_snes9x_dirs (void)
 	if (strlen(s9x_base_dir) + 1 + sizeof(dirNames[0]) > PATH_MAX + 1)
 		return (-1);
 
-	mkdir(s9x_base_dir, 0755);
+	mkdir(s9x_base_dir, 0777);
 
 	for (int i = 0; i < LAST_DIR; i++)
 	{
@@ -384,7 +384,7 @@ static int make_snes9x_dirs (void)
 		{
 			char	s[PATH_MAX + 1];
 			snprintf(s, PATH_MAX + 1, "%s%s%s", s9x_base_dir, SLASH_STR, dirNames[i]);
-			mkdir(s, 0755);
+			mkdir(s, 0777);
 		}
 	}
 
@@ -772,6 +772,35 @@ static void sigbrkhandler (int)
 
 int main (int argc, char **argv)
 {
+
+#ifdef __PLAYBOOK__
+
+	char cmdLineArgZero[50];
+	char cmdLineArgOne[50];
+	int cmdLineArgsCount = 2;
+	char * cmdLinePointers[2];
+
+	strcpy(cmdLineArgZero,argv[0]);
+
+#ifdef __HARDCODEROM__
+	strcpy(cmdLineArgOne,"/accounts/1000/shared/misc/snes9x-pb/rom/Zelda");
+#else
+	strcpy(cmdLineArgOne,"");
+#endif
+
+	cmdLinePointers[0] = cmdLineArgZero;
+	cmdLinePointers[1] = cmdLineArgOne;
+
+	fprintf(stderr, "cmdLinePointers[0] = %s\n",cmdLinePointers[0]);
+	fprintf(stderr, "cmdLinePointers[1] = %s\n",cmdLinePointers[1]);
+
+	printf("\n\nSnes9x " VERSION " for playbook/SDL\n");
+
+
+	strcpy(default_dir, "/accounts/1000/shared/misc/snes9x-pb");
+	s9x_base_dir = default_dir;
+
+#else
 	if (argc < 2)
 		S9xUsage();
 
@@ -779,7 +808,7 @@ int main (int argc, char **argv)
 
 	snprintf(default_dir, PATH_MAX + 1, "%s%s%s", getenv("HOME"), SLASH_STR, ".snes9x");
 	s9x_base_dir = default_dir;
-
+#endif
 	ZeroMemory(&Settings, sizeof(Settings));
 	Settings.MouseMaster = TRUE;
 	Settings.SuperScopeMaster = TRUE;
@@ -789,8 +818,8 @@ int main (int argc, char **argv)
 	Settings.FrameTimeNTSC = 16667;
 	Settings.SixteenBitSound = TRUE;
 	Settings.Stereo = TRUE;
-	Settings.SoundPlaybackRate = 32000;
-	Settings.SoundInputRate = 32000;
+	Settings.SoundPlaybackRate = 44100;
+	Settings.SoundInputRate = 44100;
 	Settings.SupportHiRes = TRUE;
 	Settings.Transparency = TRUE;
 	Settings.AutoDisplayMessages = TRUE;
@@ -813,8 +842,16 @@ int main (int argc, char **argv)
 
 	CPU.Flags = 0;
 
+
+#ifdef __PLAYBOOK__
+    S9xLoadConfigFiles(cmdLinePointers, cmdLineArgsCount);
+#ifdef __HARDCODEROM__
+	rom_filename = S9xParseArgs(cmdLinePointers, cmdLineArgsCount);
+#endif
+#else
 	S9xLoadConfigFiles(argv, argc);
 	rom_filename = S9xParseArgs(argv, argc);
+#endif
 
 	make_snes9x_dirs();
 
@@ -875,6 +912,29 @@ int main (int argc, char **argv)
 		}
 	}
 	else
+
+#if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
+	if (Settings.rom_filename)
+	{
+		loaded = Memory.LoadROM(Settings.rom_filename);
+
+		if (!loaded && Settings.rom_filename[0])
+		{
+			char	s[PATH_MAX + 1];
+			char	drive[_MAX_DRIVE + 1], dir[_MAX_DIR + 1], fname[_MAX_FNAME + 1], ext[_MAX_EXT + 1];
+
+			_splitpath(Settings.rom_filename, drive, dir, fname, ext);
+			snprintf(s, PATH_MAX + 1, "%s%s%s", S9xGetDirectory(ROM_DIR), SLASH_STR, fname);
+			if (ext[0] && (strlen(s) <= PATH_MAX - 1 - strlen(ext)))
+			{
+				strcat(s, ".");
+				strcat(s, ext);
+			}
+
+			loaded = Memory.LoadROM(s);
+		}
+	}
+#else
 	if (rom_filename)
 	{
 		loaded = Memory.LoadROM(rom_filename);
@@ -895,6 +955,7 @@ int main (int argc, char **argv)
 			loaded = Memory.LoadROM(s);
 		}
 	}
+#endif
 
 	if (!loaded)
 	{
@@ -922,7 +983,8 @@ int main (int argc, char **argv)
 #endif
 
 	S9xInitInputDevices();
-	S9xInitDisplay(argc, argv);
+	//Wes S9xInitDisplay(argc, argv);
+	S9xInitDisplay(cmdLineArgsCount, cmdLinePointers);
 	S9xSetupDefaultKeymap();
 
 #ifdef NETPLAY_SUPPORT
