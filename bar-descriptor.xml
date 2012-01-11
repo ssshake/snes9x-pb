@@ -48,7 +48,8 @@
     <!--  The category where the application appears. Either core.games or core.media. -->
     <category>core.games</category>
     
-    <asset path="icon.png">icon.png</asset>
+    <asset path="snes9xpbicon.png">snes9xpbicon.png</asset>
+    <asset path="snes9xpbsplash.png">snes9xpbsplash.png</asset>
    <asset path="sdl-controls.xml">sdl-controls.xml</asset>
    <asset path="select.png">select.png</asset>  
    <asset path="start.png">start.png</asset> 
@@ -99,11 +100,11 @@
     
     <!--  The icon for the application, which should be 86x86. -->
     <icon>
-        <image>icon.png</image>
+        <image>snes9xpbicon.png</image>
     </icon>
     
     <!--  The splash screen that will appear when your application is launching. Should be 1024x600. -->
-    <!-- <splashscreen></splashscreen> -->
+    <splashscreen>snes9xpbsplash.png</splashscreen>
 
     <!-- Request permission to execute native code.  Required for native applications. -->
     <action system="true">run_native</action>
