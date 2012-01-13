@@ -818,8 +818,8 @@ int main (int argc, char **argv)
 	Settings.FrameTimeNTSC = 16667;
 	Settings.SixteenBitSound = TRUE;
 	Settings.Stereo = TRUE;
-	Settings.SoundPlaybackRate = 44100;
-	Settings.SoundInputRate = 44100;
+	Settings.SoundPlaybackRate = 32000;
+	Settings.SoundInputRate = 32000;
 	Settings.SupportHiRes = TRUE;
 	Settings.Transparency = TRUE;
 	Settings.AutoDisplayMessages = TRUE;
