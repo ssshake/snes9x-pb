@@ -179,7 +179,13 @@ void S9xInitDisplay (int argc, char **argv)
 	S9xBlit2xSaIFilterInit();
 	S9xBlitHQ2xFilterInit();
 
-
+	/*
+	 * jtokarchuk
+	 * Hides the mouse cursor
+	 */
+	 
+	 SDL_ShowCursor(0);
+	 
 	/*
 	 * domaemon
 	 *
