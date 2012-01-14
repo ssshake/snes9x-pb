@@ -438,6 +438,7 @@ struct SSettings
 
 #if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
 	char    rom_filename[51];
+	bool8 rom_filenameinconf;
 #endif
 };
 
