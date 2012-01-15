@@ -1093,10 +1093,11 @@ int main (int argc, char **argv)
 
 #if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
 
+	UpdateRomList();
+	Settings.S9xFirstRun = TRUE;
+
 	if (Settings.rom_filenameinconf == false)
 	{
-		UpdateRomList();
-		Settings.S9xFirstRun = TRUE;
 		loaded = AutoLoadRom();
 	}
 
