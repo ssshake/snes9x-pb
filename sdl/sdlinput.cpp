@@ -331,6 +331,7 @@ void S9xProcessEvents (bool8 block)
 {
 	SDL_Event event;
 	bool8 quit_state = FALSE;
+	bool8 loadnextrom_state = FALSE;
 
 	while ((block) || (SDL_PollEvent (&event) != 0))
 	{
@@ -342,6 +343,13 @@ void S9xProcessEvents (bool8 block)
 			{
 				quit_state = TRUE;
 			} 
+
+			else if (event.key.keysym.sym == SDLK_INSERT && event.type == SDL_KEYDOWN)
+			{
+				loadnextrom_state = TRUE;
+				break;
+			}
+
 			else
 			{
 				S9xReportButton(event.key.keysym.mod << 16 | // keyboard mod
@@ -373,6 +381,7 @@ void S9xProcessEvents (bool8 block)
 			// domaemon: we come here when the window is getting closed.
 			quit_state = TRUE;
 			break;
+
 		}
 	}
 	
@@ -380,6 +389,14 @@ void S9xProcessEvents (bool8 block)
 	{
 		printf ("Quit Event. Bye.\n");
 		S9xExit();
+	}
+
+	if (loadnextrom_state == TRUE)
+	{
+		extern void AutoLoadRom();
+		AutoLoadRom();
+		loadnextrom_state = FALSE;
+
 	}
 }
 
