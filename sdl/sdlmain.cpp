@@ -268,6 +268,9 @@ int AutoLoadRom(void)
 			loaded = Memory.LoadROM(s);
 		}
 
+		Memory.LoadSRAM(S9xGetFilename(".srm", SRAM_DIR));
+		S9xLoadCheatFile(S9xGetFilename(".cht", CHEAT_DIR));
+
    pthread_mutex_unlock(&loader_mutex);  // -lpthread normally would be added, it's already in PB runtime.
 
 
