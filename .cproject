@@ -22,7 +22,7 @@
 							<builder buildPath="${workspace_loc:/snes9x-pb/Device-Debug}" id="com.qnx.nto.2125284936" keepEnvironmentInBuildfile="false" name="CDT Internal Builder" superClass="com.qnx.nto"/>
 							<tool id="com.qnx.qcc.tool.compiler.1570618210" name="QCC Compiler" superClass="com.qnx.qcc.tool.compiler">
 								<option id="com.qnx.qcc.option.compile.debug.151079471" name="Debug (-g)" superClass="com.qnx.qcc.option.compile.debug" value="true" valueType="boolean"/>
-								<option id="com.qnx.qcc.option.compiler.security.49207088" name="Enhanced Security (-fstack-protector-all)" superClass="com.qnx.qcc.option.compiler.security" value="true" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.compiler.security.49207088" name="Enhanced Security (-fstack-protector-all)" superClass="com.qnx.qcc.option.compiler.security" value="false" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.compiler.defines.1218111576" name="Defines (-D)" superClass="com.qnx.qcc.option.compiler.defines" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_FORTIFY_SOURCE=2"/>
 									<listOptionValue builtIn="false" value="__PLAYBOOK__=1"/>
@@ -38,6 +38,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/snes9x-pb/sdl}&quot;"/>
 								</option>
 								<option id="com.qnx.qcc.option.compiler.profile2.1353018863" name="Build for Profiling (Function Instrumentation) (-finstrument-functions)" superClass="com.qnx.qcc.option.compiler.profile2" value="false" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.compiler.profile.1740732212" name="Build for Profiling (Call Count) (-p)" superClass="com.qnx.qcc.option.compiler.profile" value="false" valueType="boolean"/>
 								<inputType id="com.qnx.qcc.inputType.compiler.342072712" superClass="com.qnx.qcc.inputType.compiler"/>
 							</tool>
 							<tool id="com.qnx.qcc.tool.assembler.535808411" name="QCC Assembler" superClass="com.qnx.qcc.tool.assembler">
@@ -54,7 +55,7 @@
 									<listOptionValue builtIn="false" value="png"/>
 									<listOptionValue builtIn="false" value="xml2"/>
 								</option>
-								<option id="com.qnx.qcc.option.linker.security.2035844690" name="Enhanced Security (-Wl,-z,relro -Wl,-z,now)" superClass="com.qnx.qcc.option.linker.security" value="true" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.linker.security.2035844690" name="Enhanced Security (-Wl,-z,relro -Wl,-z,now)" superClass="com.qnx.qcc.option.linker.security" value="false" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.linker.libraryPaths.968682604" name="Library Paths (-L)" superClass="com.qnx.qcc.option.linker.libraryPaths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SDL12/Device-Debug}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchControlOverlay/Device-Debug}&quot;"/>
@@ -62,6 +63,7 @@
 								</option>
 								<option id="com.qnx.qcc.option.linker.defLibraryPaths.722159795" superClass="com.qnx.qcc.option.linker.defLibraryPaths"/>
 								<option id="com.qnx.qcc.option.linker.profile2.2082972189" name="Build for Profiling (Function Instrumentation) (-lprofiling)" superClass="com.qnx.qcc.option.linker.profile2" value="false" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.linker.profile.1228134708" name="Build for Profiling (Call Count) (-p)" superClass="com.qnx.qcc.option.linker.profile" value="false" valueType="boolean"/>
 								<inputType id="com.qnx.qcc.inputType.linker.1528632091" superClass="com.qnx.qcc.inputType.linker">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -133,17 +135,11 @@
 								<option id="com.qnx.qcc.option.linker.security.2072364291" name="Enhanced Security (-Wl,-z,relro -Wl,-z,now)" superClass="com.qnx.qcc.option.linker.security" value="false" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.linker.pie.1760691225" name="Position Independent Executable (-pie)" superClass="com.qnx.qcc.option.linker.pie" value="false" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.linker.libraryPaths.1264270665" name="Library Paths (-L)" superClass="com.qnx.qcc.option.linker.libraryPaths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;${QNX_TARGET}/../target-override/${CPUVARDIR}/lib&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${QNX_TARGET}/../target-override/${CPUVARDIR}/usr/lib&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SDL12/Device-Release}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchControlOverlay/Device-Release}&quot;"/>
-								</option>
-								<option id="com.qnx.qcc.option.linker.defLibraryPaths.1022585534" superClass="com.qnx.qcc.option.linker.defLibraryPaths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="${QNX_TARGET}/../target-override/${CPUVARDIR}/lib"/>
 									<listOptionValue builtIn="false" value="${QNX_TARGET}/../target-override/${CPUVARDIR}/usr/lib"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SDL12/Device-Release}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchControlOverlay/Device-Release}&quot;"/>
 								</option>
+								<option id="com.qnx.qcc.option.linker.defLibraryPaths.1022585534" superClass="com.qnx.qcc.option.linker.defLibraryPaths"/>
 								<inputType id="com.qnx.qcc.inputType.linker.1756807864" superClass="com.qnx.qcc.inputType.linker">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
