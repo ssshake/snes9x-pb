@@ -201,7 +201,6 @@ extern FILE	*trace;
 #define S9X_CONF_FILE_NAME	"snes9x.conf"
 
 static char	*rom_filename = NULL;
-
 static bool parse_controller_spec (int, const char *);
 static void parse_crosshair_spec (enum crosscontrols, const char *);
 static bool try_load_config_file (const char *, ConfigFile &);
@@ -397,7 +396,13 @@ void S9xLoadConfigFiles (char **argv, int argc)
 
 	rom_filename = conf.GetStringDup("ROM::Filename", NULL);
 #if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
-	strcpy(Settings.rom_filename, rom_filename);
+		if (conf.Exists("ROM::Filename")){
+			strcpy(Settings.rom_filename, rom_filename);
+			Settings.rom_filenameinconf = true;
+		}
+		else {
+			Settings.rom_filenameinconf = false;
+		}
 #endif
 	// Sound
 
