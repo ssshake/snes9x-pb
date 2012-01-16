@@ -67,6 +67,13 @@
 #include "debug.h"
 #endif
 
+#ifdef __PLAYBOOK__
+#include <dirent.h>
+#include <pthread.h>  // mutex
+#endif
+#include <vector.h>
+
+
 #ifdef NETPLAY_SUPPORT
 #ifdef _DEBUG
 #define NP_DEBUG 2
@@ -106,6 +113,180 @@ static const char	dirNames[13][32] =
 static uint32	joypads[8];
 static uint32	old_joypads[8];
 #endif
+
+char g_runningFile_str[64];
+static int gameIndex = 0;
+static vector<string> vsList;
+
+vector<string> GetRomDirListing( const char *dpath )
+
+{
+ //vector<string> vsList;
+
+#ifdef __PLAYBOOK__
+	DIR* dirp;
+	struct dirent* direntp;
+#endif
+
+if(!dpath)
+{
+    fprintf(stderr,"dpath is null.\n");
+	return vsList;
+}
+
+#ifdef __PLAYBOOK__
+
+  dirp = opendir( "/accounts/1000/shared/misc/snes9x-pb/rom/" );
+  if( dirp != NULL )
+  {
+	 for(;;)
+	 {
+		direntp = readdir( dirp );
+		if( direntp == NULL )
+		  break;
+
+		 fprintf(stderr,"FILE: '%s' \n", direntp->d_name);
+		// FCEUI_DispMessage(direntp->d_name,0);
+		  string tmp = direntp->d_name;
+
+		  if( strcmp( direntp->d_name, ".") == 0)
+		  {
+			 continue;
+		  }
+
+		  if( strcmp( direntp->d_name,"..") == 0)
+			  continue;
+
+		  if( (tmp.substr(tmp.find_last_of(".") + 1) == "smc") ||
+			  (tmp.substr(tmp.find_last_of(".") + 1) == "SMC") )
+		  {
+	         // fprintf(stderr,"ROM: %s\n", direntp->d_name);
+			  vsList.push_back(direntp->d_name);
+		  }
+	 }
+ }
+  else
+  {
+	fprintf(stderr,"dirp is NULL ...\n");
+  }
+
+#endif
+ fprintf(stderr,"number of files %d\n", vsList.size() );
+ return vsList;
+}
+
+
+
+#ifdef __PLAYBOOK__
+static pthread_mutex_t loader_mutex = PTHREAD_MUTEX_INITIALIZER;
+static vector<string> vecList;
+vector<string> sortedvecList;
+#endif
+
+//
+//
+//
+
+
+vector<string> sortAlpha(vector<string> sortThis)
+{
+     int swap;
+     string temp;
+
+     do
+     {
+         swap = 0;
+         for (int count = 0; count < sortThis.size() - 1; count++)
+         {
+             if (sortThis.at(count) > sortThis.at(count + 1))
+             {
+                   temp = sortThis.at(count);
+                   sortThis.at(count) = sortThis.at(count + 1);
+                   sortThis.at(count + 1) = temp;
+                   swap = 1;
+             }
+         }
+     }while (swap != 0);
+
+     return sortThis;
+}
+
+
+int AutoLoadRom(void)
+{
+   // static int gameIndex;
+    int status = 0;
+    bool8 loaded = FALSE;
+    pthread_mutex_lock(&loader_mutex);
+
+	if( sortedvecList.size() == 0)
+	{
+	   fprintf(stderr,"AutoLoadRom: error no games in sortedvecList\n");
+	   return -1;
+	}
+
+	fprintf(stderr,"AutoLoadRom\n");
+    string baseDir ="/accounts/1000/shared/misc/snes9x-pb/rom/";
+
+    if(++gameIndex >= sortedvecList.size())
+    	gameIndex = 0;
+
+    if( sortedvecList.size() == 1)
+    	gameIndex = 0;
+
+    if( gameIndex == sortedvecList.size())
+    	gameIndex = 0;
+
+    if (Settings.S9xFirstRun == TRUE) {
+    	gameIndex = 0;
+    	Settings.S9xFirstRun = FALSE;
+    }
+
+
+    memset(&g_runningFile_str[0],0,64);
+    sprintf(&g_runningFile_str[0], sortedvecList[gameIndex].c_str());
+
+    baseDir = baseDir + sortedvecList[gameIndex];
+    fprintf(stderr,"loading: %d/%d '%s'\n",gameIndex + 1, sortedvecList.size(), baseDir.c_str() );
+
+  bool stopemu = Settings.StopEmulation;
+  	  if(!stopemu)
+  		  Settings.StopEmulation = TRUE;
+
+   loaded = Memory.LoadROM(baseDir.c_str());
+
+		if (!loaded && baseDir.c_str()[0])
+		{
+			char	s[PATH_MAX + 1];
+			char	drive[_MAX_DRIVE + 1], dir[_MAX_DIR + 1], fname[_MAX_FNAME + 1], ext[_MAX_EXT + 1];
+
+			_splitpath(baseDir.c_str(), drive, dir, fname, ext);
+			snprintf(s, PATH_MAX + 1, "%s%s%s", S9xGetDirectory(ROM_DIR), SLASH_STR, fname);
+			if (ext[0] && (strlen(s) <= PATH_MAX - 1 - strlen(ext)))
+			{
+				strcat(s, ".");
+				strcat(s, ext);
+			}
+
+			loaded = Memory.LoadROM(s);
+		}
+
+		Memory.LoadSRAM(S9xGetFilename(".srm", SRAM_DIR));
+		S9xLoadCheatFile(S9xGetFilename(".cht", CHEAT_DIR));
+
+   pthread_mutex_unlock(&loader_mutex);  // -lpthread normally would be added, it's already in PB runtime.
+
+
+   return true;
+}
+
+void UpdateRomList(void)
+{
+  vecList = GetRomDirListing("/accounts/1000/shared/misc/snes9x-pb/rom/");
+  sortedvecList = sortAlpha(vecList);
+}
+
+
 
 void S9xParseInputConfig(ConfigFile &, int pass); // defined in sdlinput
 
@@ -808,7 +989,6 @@ int main (int argc, char **argv)
 	char cmdLineArgOne[50];
 	int cmdLineArgsCount = 2;
 	char * cmdLinePointers[2];
-
 	strcpy(cmdLineArgZero,argv[0]);
 
 #ifdef __HARDCODEROM__
@@ -828,6 +1008,7 @@ int main (int argc, char **argv)
 
 	strcpy(default_dir, "/accounts/1000/shared/misc/snes9x-pb");
 	s9x_base_dir = default_dir;
+
 
 #else
 	if (argc < 2)
@@ -945,7 +1126,16 @@ int main (int argc, char **argv)
 	else
 
 #if defined (__PLAYBOOK__) && ! defined (__HARDCODEROM__)
-	if (Settings.rom_filename)
+
+	UpdateRomList();
+	Settings.S9xFirstRun = TRUE;
+
+	if (Settings.rom_filenameinconf == false)
+	{
+		loaded = AutoLoadRom();
+	}
+
+	if (Settings.rom_filenameinconf == true)
 	{
 		loaded = Memory.LoadROM(Settings.rom_filename);
 
@@ -965,6 +1155,7 @@ int main (int argc, char **argv)
 			loaded = Memory.LoadROM(s);
 		}
 	}
+
 #else
 	if (rom_filename)
 	{
@@ -986,6 +1177,7 @@ int main (int argc, char **argv)
 			loaded = Memory.LoadROM(s);
 		}
 	}
+
 #endif
 
 	if (!loaded)
