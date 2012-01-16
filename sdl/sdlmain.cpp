@@ -37,7 +37,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
-#include <fstream>
+
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -68,6 +68,7 @@
 #endif
 
 #ifdef __PLAYBOOK__
+#include <fstream>
 #include <dirent.h>
 #include <pthread.h>  // mutex
 #endif
@@ -80,7 +81,6 @@
 #endif
 #endif
 
-#define S9X_CONF_FILE_NAME	"snes9x.conf"
 
 static const char	*s9x_base_dir        = NULL,
 					*rom_filename        = NULL,
