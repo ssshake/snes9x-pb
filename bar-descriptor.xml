@@ -53,16 +53,17 @@
    <asset path="sdl-controls.xml">sdl-controls.xml</asset>
    <asset path="select.png">select.png</asset>  
    <asset path="start.png">start.png</asset> 
+   <asset path="next.png">next.png</asset> 
    <asset path="bumper.png">bumper.png</asset>
-    <asset path="up.png">up.png</asset>   
-    <asset path="down.png">down.png</asset>
-    <asset path="left.png">left.png</asset>
-    <asset path="right.png">right.png</asset>
-    <asset path="a.png">a.png</asset>
-    <asset path="b.png">b.png</asset>
-    <asset path="x.png">x.png</asset>
-    <asset path="y.png">y.png</asset>
-
+	<asset path="red.png">red.png</asset>
+	<asset path="blue.png">blue.png</asset>
+	<asset path="green.png">green.png</asset>
+	<asset path="yellow.png">yellow.png</asset>
+    <asset path="dpad.png">dpad.png</asset>
+    
+    <asset path="snes9x.conf">snes9x.conf</asset>
+    <asset path="SNESTestProgram.smc">SNESTestProgram.smc</asset>
+    
     <asset path="${QNX_TARGET}/armle-v7/usr/lib/libbps.so" type="Qnx/Elf">lib/libbps.so.1</asset>
     <configuration id="com.qnx.qcc.configuration.exe.debug.967331826" name="Device-Debug">
  
