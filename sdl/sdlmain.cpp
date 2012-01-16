@@ -37,6 +37,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
+#include <fstream>
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -71,6 +72,8 @@
 #define NP_DEBUG 2
 #endif
 #endif
+
+#define S9X_CONF_FILE_NAME	"snes9x.conf"
 
 static const char	*s9x_base_dir        = NULL,
 					*rom_filename        = NULL,
@@ -109,6 +112,8 @@ void S9xParseInputConfig(ConfigFile &, int pass); // defined in sdlinput
 static long log2 (long);
 static void NSRTControllerSetup (void);
 static int make_snes9x_dirs (void);
+static void create_default_conf (void);
+static void create_default_app (void);
 
 void _splitpath (const char *path, char *drive, char *dir, char *fname, char *ext)
 {
@@ -355,7 +360,7 @@ static void NSRTControllerSetup (void)
 
 void S9xParsePortConfig (ConfigFile &conf, int pass)
 {
-	s9x_base_dir                = conf.GetStringDup("Unix::BaseDir",             default_dir);
+	//s9x_base_dir                = conf.GetStringDup("Unix::BaseDir",             default_dir);
 	snapshot_filename           = conf.GetStringDup("Unix::SnapshotFilename",    NULL);
 	play_smv_filename           = conf.GetStringDup("Unix::PlayMovieFilename",   NULL);
 	record_smv_filename         = conf.GetStringDup("Unix::RecordMovieFilename", NULL);
@@ -389,6 +394,30 @@ static int make_snes9x_dirs (void)
 	}
 
 	return (0);
+}
+
+void create_default_conf (void)
+{
+
+	ifstream ifile("/accounts/1000/shared/misc/snes9x-pb/snes9x.conf");
+	if(!ifile){
+		ifstream f1("app/native/snes9x.conf", fstream::binary);
+		ofstream f2("/accounts/1000/shared/misc/snes9x-pb/snes9x.conf", fstream::trunc|fstream::binary);
+		f2 << f1.rdbuf();
+	}
+
+}
+
+void create_default_app (void)
+{
+
+	ifstream ifile("/accounts/1000/shared/misc/snes9x-pb/rom/SNESTestProgram.smc");
+	if(!ifile){
+		ifstream f1("app/native/SNESTestProgram.smc", fstream::binary);
+		ofstream f2("/accounts/1000/shared/misc/snes9x-pb/rom/SNESTestProgram.smc", fstream::trunc|fstream::binary);
+		f2 << f1.rdbuf();
+	}
+
 }
 
 const char * S9xGetDirectory (enum s9x_getdirtype dirtype)
@@ -842,6 +871,10 @@ int main (int argc, char **argv)
 
 	CPU.Flags = 0;
 
+	make_snes9x_dirs();
+
+	create_default_conf();
+	create_default_app();
 
 #ifdef __PLAYBOOK__
     S9xLoadConfigFiles(cmdLinePointers, cmdLineArgsCount);
@@ -852,8 +885,6 @@ int main (int argc, char **argv)
 	S9xLoadConfigFiles(argv, argc);
 	rom_filename = S9xParseArgs(argv, argc);
 #endif
-
-	make_snes9x_dirs();
 
 	if (!Memory.Init() || !S9xInitAPU())
 	{
