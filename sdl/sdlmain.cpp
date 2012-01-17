@@ -592,10 +592,10 @@ void create_default_conf (void)
 void create_default_app (void)
 {
 
-	ifstream ifile("/accounts/1000/shared/misc/snes9x-pb/rom/SNESTestProgram.smc");
+	ifstream ifile("/accounts/1000/shared/misc/snes9x-pb/rom/ttt.smc");
 	if(!ifile){
-		ifstream f1("app/native/SNESTestProgram.smc", fstream::binary);
-		ofstream f2("/accounts/1000/shared/misc/snes9x-pb/rom/SNESTestProgram.smc", fstream::trunc|fstream::binary);
+		ifstream f1("app/native/ttt.smc", fstream::binary);
+		ofstream f2("/accounts/1000/shared/misc/snes9x-pb/rom/ttt.smc", fstream::trunc|fstream::binary);
 		f2 << f1.rdbuf();
 	}
 
