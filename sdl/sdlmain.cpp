@@ -249,6 +249,9 @@ int AutoLoadRom(void)
   bool stopemu = Settings.StopEmulation;
   	  if(!stopemu)
   		  Settings.StopEmulation = TRUE;
+  
+  Memory.SaveSRAM(S9xGetFilename(".srm", SRAM_DIR));
+  S9xSaveCheatFile(S9xGetFilename(".cht", CHEAT_DIR));
 
    loaded = Memory.LoadROM(baseDir.c_str());
 
