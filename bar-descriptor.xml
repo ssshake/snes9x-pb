@@ -66,6 +66,8 @@
     <asset path="ttt.smc">ttt.smc</asset>
     
     <asset path="${QNX_TARGET}/armle-v7/usr/lib/libbps.so" type="Qnx/Elf">lib/libbps.so.1</asset>
+    <asset path="savestate.png">savestate.png</asset>
+    <asset path="loadstate.png">loadstate.png</asset>
     
     <configuration id="com.qnx.qcc.configuration.exe.debug.967331826" name="Device-Debug">
       <platformArchitecture>armle-v7</platformArchitecture>
@@ -75,9 +77,29 @@
     </configuration>
     <configuration id="com.qnx.qcc.configuration.exe.release.496965778" name="Device-Release">
       <platformArchitecture>armle-v7</platformArchitecture>
-      <asset path="${workspace_loc:/SDL12/Device-Release/libSDL12.so}" type="Qnx/Elf">lib/libSDL12.so</asset>
-      <asset path="${workspace_loc:/TouchControlOverlay/Device-Release/libTouchControlOverlay.so}" type="Qnx/Elf">lib/libTouchControlOverlay.so</asset>    
+      <asset path="${workspace_loc:/SDL12/Device-Debug/libSDL12.so}" type="Qnx/Elf">lib/libSDL12.so</asset>
+      <asset path="${workspace_loc:/TouchControlOverlay/Device-Debug/libTouchControlOverlay.so}" type="Qnx/Elf">lib/libTouchControlOverlay.so</asset>    
        <asset path="Device-Release/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
+    </configuration>
+    <configuration id="com.qnx.qcc.configuration.exe.profile.329071977" name="Device-Profile">
+       <platformArchitecture>armle-v7</platformArchitecture>
+       <asset path="Device-Profile/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
+    </configuration>
+    <configuration id="com.qnx.qcc.configuration.exe.profile.coverage.257720351" name="Device-Coverage">
+       <platformArchitecture>armle-v7</platformArchitecture>
+       <asset path="Device-Coverage/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
+    </configuration>
+    <configuration id="com.qnx.qcc.configuration.exe.debug.673053278" name="Simulator">
+       <platformArchitecture>x86</platformArchitecture>
+       <asset path="Simulator/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
+    </configuration>
+    <configuration id="com.qnx.qcc.configuration.exe.profile.1388146556" name="Simulator-Profile">
+       <platformArchitecture>x86</platformArchitecture>
+       <asset path="Simulator-Profile/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
+    </configuration>
+    <configuration id="com.qnx.qcc.configuration.exe.profile.coverage.1738999178" name="Simulator-Coverage">
+       <platformArchitecture>x86</platformArchitecture>
+       <asset path="Simulator-Coverage/snes9x-pb" entry="true" type="Qnx/Elf">snes9x-pb</asset>
     </configuration>
     
     <!--  The icon for the application, which should be 86x86. -->

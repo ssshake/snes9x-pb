@@ -211,7 +211,21 @@ vector<string> sortAlpha(vector<string> sortThis)
      return sortThis;
 }
 
+void SaveState(void)
+{
+	char fname[1025];
+	sprintf(fname, Memory.ROMFilename);
+	sprintf(fname + strlen(fname),".state");
+	S9xFreezeGame(fname);
+}
 
+void LoadState(void)
+{
+	char fname[1025];
+	sprintf(fname, Memory.ROMFilename);
+	sprintf(fname + strlen(fname),".state");
+	S9xUnfreezeGame(fname);
+}
 int AutoLoadRom(void)
 {
    // static int gameIndex;
@@ -252,10 +266,9 @@ int AutoLoadRom(void)
   bool stopemu = Settings.StopEmulation;
   	  if(!stopemu)
   		  Settings.StopEmulation = TRUE;
-  
-  Memory.SaveSRAM(S9xGetFilename(".srm", SRAM_DIR));
-  S9xSaveCheatFile(S9xGetFilename(".cht", CHEAT_DIR));
 
+   Memory.SaveSRAM(S9xGetFilename(".srm", SRAM_DIR));
+   S9xSaveCheatFile(S9xGetFilename(".cht", CHEAT_DIR));
    loaded = Memory.LoadROM(baseDir.c_str());
 
 		if (!loaded && baseDir.c_str()[0])
