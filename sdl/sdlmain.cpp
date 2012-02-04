@@ -214,16 +214,18 @@ vector<string> sortAlpha(vector<string> sortThis)
 void SaveState(void)
 {
 	char fname[1025];
-	sprintf(fname, Memory.ROMFilename);
-	sprintf(fname + strlen(fname),".state");
+	sprintf(fname, "../savestate/");
+	sprintf(fname + strlen(fname), Memory.ROMFilename);
+	sprintf(fname + strlen(fname) - 4, "");
 	S9xFreezeGame(fname);
 }
 
 void LoadState(void)
 {
 	char fname[1025];
-	sprintf(fname, Memory.ROMFilename);
-	sprintf(fname + strlen(fname),".state");
+	sprintf(fname, "../savestate/");
+	sprintf(fname + strlen(fname), Memory.ROMFilename);
+	sprintf(fname + strlen(fname) - 4, "");
 	S9xUnfreezeGame(fname);
 }
 int AutoLoadRom(void)
