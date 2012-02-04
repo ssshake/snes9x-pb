@@ -9,6 +9,12 @@
 <key x="746" y="408" width="60" height="60" sym="277" image="next.png">
 <label x="0" y="0" width="60" height="60" image="next.png"/>
 </key>
+<key x="306" y="408" width="60" height="60" sym="278" image="savestate.png">
+<label x="0" y="0" width="60" height="60" image="savestate.png"/>
+</key>
+<key x="446" y="408" width="60" height="60" sym="279" image="loadstate.png">
+<label x="0" y="0" width="60" height="60" image="loadstate.png"/>
+</key>
 <dpad x="0" y="100" width="180" height="180" image="dpad.png">
 <label x="0" y="0" width="180" height="180" image="dpad.png"/>
 </dpad>

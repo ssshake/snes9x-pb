@@ -332,6 +332,8 @@ void S9xProcessEvents (bool8 block)
 	SDL_Event event;
 	bool8 quit_state = FALSE;
 	bool8 loadnextrom_state = FALSE;
+	bool8 savestate = FALSE;
+	bool8 loadstate = FALSE;
 
 	while ((block) || (SDL_PollEvent (&event) != 0))
 	{
@@ -347,6 +349,18 @@ void S9xProcessEvents (bool8 block)
 			else if (event.key.keysym.sym == SDLK_INSERT && event.type == SDL_KEYDOWN)
 			{
 				loadnextrom_state = TRUE;
+				break;
+			}
+
+			else if (event.key.keysym.sym == SDLK_HOME && event.type == SDL_KEYDOWN)
+			{
+				savestate = TRUE;
+				break;
+			}
+
+			else if (event.key.keysym.sym == SDLK_END && event.type == SDL_KEYDOWN)
+			{
+				loadstate = TRUE;
 				break;
 			}
 
@@ -397,6 +411,19 @@ void S9xProcessEvents (bool8 block)
 		AutoLoadRom();
 		loadnextrom_state = FALSE;
 
+	}
+
+	if (savestate == TRUE)
+	{
+		extern void SaveState();
+		SaveState();
+		savestate = FALSE;
+	}
+
+	if(loadstate == TRUE) {
+		extern void LoadState();
+		LoadState();
+		loadstate = FALSE;
 	}
 }
 
