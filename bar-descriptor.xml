@@ -61,12 +61,14 @@
 	<asset path="green.png">green.png</asset>
 	<asset path="yellow.png">yellow.png</asset>
     <asset path="dpad.png">dpad.png</asset>
-    
+   	<asset path="savestate.png">savestate.png</asset>
+   	<asset path="loadstate.png">loadstate.png</asset>
+   	    
     <asset path="snes9x.conf">snes9x.conf</asset>
     <asset path="ttt.smc">ttt.smc</asset>
     
     <asset path="${QNX_TARGET}/../target-override/${CPUVARDIR}/usr/lib/libbps.so" type="Qnx/Elf">lib/libbps.so.1</asset>
-    
+
     <configuration id="com.qnx.qcc.configuration.exe.debug.967331826" name="Device-Debug">
       <platformArchitecture>armle-v7</platformArchitecture>
       <asset path="${workspace_loc:/SDL12/Device-Debug/libSDL12.so}" type="Qnx/Elf">lib/libSDL12.so</asset>
