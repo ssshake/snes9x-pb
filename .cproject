@@ -39,11 +39,12 @@
 								</option>
 								<option id="com.qnx.qcc.option.compiler.profile2.1353018863" name="Build for Profiling (Function Instrumentation) (-finstrument-functions)" superClass="com.qnx.qcc.option.compiler.profile2" value="false" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.compiler.profile.1740732212" name="Build for Profiling (Call Count) (-p)" superClass="com.qnx.qcc.option.compiler.profile" value="false" valueType="boolean"/>
-								<option id="com.qnx.qcc.option.compiler.optlevel.1127180392" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.3" valueType="enumerated"/>
+								<option id="com.qnx.qcc.option.compiler.optlevel.1127180392" name="Optimization Level" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.3" valueType="enumerated"/>
 								<inputType id="com.qnx.qcc.inputType.compiler.342072712" superClass="com.qnx.qcc.inputType.compiler"/>
 							</tool>
 							<tool id="com.qnx.qcc.tool.assembler.535808411" name="QCC Assembler" superClass="com.qnx.qcc.tool.assembler">
 								<option id="com.qnx.qcc.option.assembler.debug.1443220265" name="Debug (-g)" superClass="com.qnx.qcc.option.assembler.debug" value="false" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.assembler.includePath.986971268" name="Include Directories (-I)" superClass="com.qnx.qcc.option.assembler.includePath" valueType="includePath"/>
 								<inputType id="com.qnx.qcc.inputType.assembler.1037074523" superClass="com.qnx.qcc.inputType.assembler"/>
 							</tool>
 							<tool id="com.qnx.qcc.tool.linker.1866585976" name="QCC Linker" superClass="com.qnx.qcc.tool.linker">
@@ -51,8 +52,8 @@
 								<option id="com.qnx.qcc.option.linker.langcpp.1441216227" name="C++ (-lang-c++)" superClass="com.qnx.qcc.option.linker.langcpp" value="true" valueType="boolean"/>
 								<option id="com.qnx.qcc.option.linker.libraries.1259065077" name="Libraries (-l)" superClass="com.qnx.qcc.option.linker.libraries" valueType="libs">
 									<listOptionValue builtIn="false" value="SDL12"/>
-									<listOptionValue builtIn="false" value="TouchControlOverlay"/>
 									<listOptionValue builtIn="false" value="bps"/>
+									<listOptionValue builtIn="false" value="TouchControlOverlay"/>
 									<listOptionValue builtIn="false" value="png"/>
 									<listOptionValue builtIn="false" value="xml2"/>
 								</option>
@@ -61,6 +62,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SDL12/Device-Debug}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchControlOverlay/Device-Debug}&quot;"/>
 									<listOptionValue builtIn="false" value="${QNX_TARGET}/../target-override/${CPUVARDIR}/usr/lib"/>
+									<listOptionValue builtIn="false" value="&quot;C:\bbndk-2.0.1\target\qnx6\usr\include\&quot;"/>
 								</option>
 								<option id="com.qnx.qcc.option.linker.defLibraryPaths.722159795" superClass="com.qnx.qcc.option.linker.defLibraryPaths"/>
 								<option id="com.qnx.qcc.option.linker.profile2.2082972189" name="Build for Profiling (Function Instrumentation) (-lprofiling)" superClass="com.qnx.qcc.option.linker.profile2" value="false" valueType="boolean"/>

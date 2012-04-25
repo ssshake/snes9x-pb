@@ -47,7 +47,7 @@ s9xcommand_t S9xInitCommandT (const char *n)
 	s9xcommand_t	cmd;
 
 	cmd.type         = S9xBadMapping;
-	cmd.multi_press  = 0;
+	cmd.multi_press  = 1;
 	cmd.button_norpt = 0;
 	cmd.port[0]      = 0xff;
 	cmd.port[1]      = 0;
@@ -334,6 +334,7 @@ void S9xProcessEvents (bool8 block)
 	bool8 loadnextrom_state = FALSE;
 	bool8 savestate = FALSE;
 	bool8 loadstate = FALSE;
+	bool8 loaded = FALSE;
 
 	while ((block) || (SDL_PollEvent (&event) != 0))
 	{
@@ -407,8 +408,8 @@ void S9xProcessEvents (bool8 block)
 
 	if (loadnextrom_state == TRUE)
 	{
-		extern void AutoLoadRom();
-		AutoLoadRom();
+		extern int AutoLoadRom();
+		loaded = AutoLoadRom();
 		loadnextrom_state = FALSE;
 
 	}
@@ -480,28 +481,26 @@ main()
 		switch (event.type) {
 		case SDL_KEYDOWN:
 			printf ("KEYDOWN\n");
-			break;
 		case SDL_JOYAXISMOTION:
 			printf ("JOYAXISMOTION\n");
-			break;
 		case SDL_JOYBUTTONDOWN:
 			printf ("JOYBUTTONDOWN\n");
 			printf ("%d \n", event.jbutton.button);
-			break;
+
 		case SDL_JOYHATMOTION:
 			switch (event.jhat.value) {
 			case SDL_HAT_UP:
 				printf ("SDL_HAT_UP\n");
-				break;
+
 			case SDL_HAT_DOWN:
 				printf ("SDL_HAT_DOWN\n");
-				break;
+
 			case SDL_HAT_LEFT:
 				printf ("SDL_HAT_LEFT\n");
-				break;
+
 			case SDL_HAT_RIGHT:
 				printf ("SDL_HAT_RIGHT\n");
-				break;
+
 			}
 
 			printf ("JOYHATMOTION\n");

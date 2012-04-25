@@ -49,6 +49,10 @@
 
 #include "sdl_snes9x.h"
 
+#include <bps/dialog.h>
+#include <bps/bps.h>
+#include <bps/event.h>
+
 #include "snes9x.h"
 #include "memmap.h"
 #include "apu/apu.h"
@@ -126,6 +130,7 @@ vector<string> GetRomDirListing( const char *dpath )
 #ifdef __PLAYBOOK__
 	DIR* dirp;
 	struct dirent* direntp;
+
 #endif
 
 if(!dpath)
@@ -228,41 +233,81 @@ void LoadState(void)
 	sprintf(fname + strlen(fname) - 4, "");
 	S9xUnfreezeGame(fname);
 }
+
 int AutoLoadRom(void)
 {
    // static int gameIndex;
     int status = 0;
     bool8 loaded = FALSE;
     pthread_mutex_lock(&loader_mutex);
+    const char ** list = 0;
+    int count = 0;
+    list = (const char**)malloc(sortedvecList.size()*sizeof(char*));
 
-	if( sortedvecList.size() == 0)
-	{
-	   fprintf(stderr,"AutoLoadRom: error no games in sortedvecList\n");
-	   return -1;
-	}
+
+
+    for(;;){
+    	if(count >= sortedvecList.size()) break;
+    	fprintf(stderr, "%d \n", count);
+    	list[count] = sortedvecList[count].c_str();
+    	count++;
+    }
+
+    // ROM selector
+       dialog_instance_t dialog = 0;
+       int i, rc;
+       bps_event_t *event;
+       int domain = 0;
+       const char * label;
+       char isofilename[256];
+       dialog_create_popuplist(&dialog);
+       dialog_set_popuplist_items(dialog, list, sortedvecList.size());
+
+           char* cancel_button_context = "Canceled";
+           char* okay_button_context = "Okay";
+           dialog_add_button(dialog, DIALOG_CANCEL_LABEL, true, cancel_button_context, true);
+           dialog_add_button(dialog, DIALOG_OK_LABEL, true, okay_button_context, true);
+           dialog_set_popuplist_multiselect(dialog, false);
+           dialog_show(dialog);
+
+           while(1){
+               bps_get_event(&event, -1);
+
+               if (event) {
+                   domain = bps_event_get_domain(event);
+                   if (domain == dialog_get_domain()) {
+                       int *response[1];
+                       int num;
+
+                       label = dialog_event_get_selected_label(event);
+
+                       if(strcmp(label, DIALOG_OK_LABEL) == 0){
+                           dialog_event_get_popuplist_selected_indices(event, (int**)response, &num);
+                           if(num != 0){
+                               //*response[0] is the index that was selected
+                               printf("%s", list[*response[0]]);fflush(stdout);
+                               strcpy(isofilename, list[*response[0]]);
+                           }
+                           bps_free(response[0]);
+                       } else {
+                           printf("User has canceled ISO dialog.");
+                           return false;
+                       }
+                       break;
+                   }
+               }
+           }
+
+
+    //test end
 
 	fprintf(stderr,"AutoLoadRom\n");
     string baseDir ="/accounts/1000/shared/misc/snes9x-pb/rom/";
 
-    if(++gameIndex >= sortedvecList.size())
-    	gameIndex = 0;
-
-    if( sortedvecList.size() == 1)
-    	gameIndex = 0;
-
-    if( gameIndex == sortedvecList.size())
-    	gameIndex = 0;
-
-    if (Settings.S9xFirstRun == TRUE) {
-    	gameIndex = 0;
-    	Settings.S9xFirstRun = FALSE;
-    }
-
-
     memset(&g_runningFile_str[0],0,64);
-    sprintf(&g_runningFile_str[0], sortedvecList[gameIndex].c_str());
+    sprintf(&g_runningFile_str[0], isofilename);
 
-    baseDir = baseDir + sortedvecList[gameIndex];
+    baseDir = baseDir + isofilename;
     fprintf(stderr,"loading: %d/%d '%s'\n",gameIndex + 1, sortedvecList.size(), baseDir.c_str() );
 
   bool stopemu = Settings.StopEmulation;
@@ -294,7 +339,7 @@ int AutoLoadRom(void)
 
    pthread_mutex_unlock(&loader_mutex);  // -lpthread normally would be added, it's already in PB runtime.
 
-
+   free(list);
    return true;
 }
 
@@ -1000,7 +1045,8 @@ static void sigbrkhandler (int)
 
 int main (int argc, char **argv)
 {
-
+	bps_initialize();
+	dialog_request_events(0);
 #ifdef __PLAYBOOK__
 
 	char cmdLineArgZero[50];

@@ -6,13 +6,13 @@
 <key x="10" y="408" width="60" height="60" sym="32" image="select.png">
 <label x="0" y="0" width="60" height="60" image="select.png"/>
 </key>
-<key x="746" y="408" width="60" height="60" sym="277" image="next.png">
+<key x="756" y="408" width="60" height="60" sym="277" image="next.png">
 <label x="0" y="0" width="60" height="60" image="next.png"/>
 </key>
-<key x="306" y="448" width="30" height="30" sym="278" image="savestate.png">
+<key x="256" y="448" width="30" height="30" sym="278" image="savestate.png">
 <label x="0" y="0" width="30" height="30" image="savestate.png"/>
 </key>
-<key x="446" y="448" width="30" height="30" sym="279" image="loadstate.png">
+<key x="515" y="448" width="30" height="30" sym="279" image="loadstate.png">
 <label x="0" y="0" width="30" height="30" image="loadstate.png"/>
 </key>
 <dpad x="0" y="100" width="180" height="180" image="dpad.png">
